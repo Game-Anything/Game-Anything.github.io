@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game-Anything</title>
+<meta name="description" content="Anything in. Playable game out. A skill and framework for coding agents: give it a gameplay video or a game repo, and the agent builds a game you can play.">
+<link rel="canonical" href="https://game-anything.github.io/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23D8321A' d='M7 6h11l-4 20H3z'/%3E%3Cpath fill='%231E3FD8' d='M18 6h11l-4 20H14z'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#15132B">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Game-Anything">
+<meta property="og:title" content="Game-Anything">
+<meta property="og:description" content="Anything in. Playable game out. A skill and framework for coding agents.">
+<meta property="og:url" content="https://game-anything.github.io/">
+<meta property="og:image" content="https://game-anything.github.io/media/figures/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@1,700;1,800;1,900&family=M+PLUS+2:wght@400;500;700;800&family=Sofia+Sans+Extra+Condensed:wght@700;800&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M6 3.5v17a1 1 0 0 0 1.5.86l14-8.5a1 1 0 0 0 0-1.72l-14-8.5A1 1 0 0 0 6 3.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M5 3h5v18H5zM14 3h5v18h-5z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 20V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/></symbol>
+  <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m9 6-6 6 6 6"/><path d="m15 6 6 6-6 6"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+</svg>
+
+<nav class="nav" aria-label="Sections" data-t-aria="nav-label">
+  <div class="wrap nav__row">
+    <a class="brand" href="#top" aria-label="Game-Anything"><i aria-hidden="true"></i><span>GAME-ANYTHING</span></a>
+    <div class="nav__links">
+      <a href="#video">Video 2 Game</a>
+      <a href="#repo">Repo 2 Game</a>
+      <a href="#labs" data-t="nav-labs">For model labs</a>
+    </div>
+    <button class="lang-btn" type="button" id="lang-toggle"></button>
+  </div>
+</nav>
+
+<main>
+
+<section class="stage" id="top" aria-label="What Game-Anything does, with an example" data-t-aria="stage-label">
+  <div class="stage__grid">
+    <div class="intro">
+      <div class="intro__what">
+        <h1>Game-Anything</h1>
+        <p class="intro__tag" data-t="intro-tag">Anything in. Playable game out.</p>
+        <p class="intro__line" data-t="intro-line">A skill and framework for coding agents.</p>
+      </div>
+      <ul class="intro__for">
+        <li><a href="#video" data-t="use-make">Make games</a></li>
+        <li><a href="#celeste" data-t="use-test">Test coding agents</a></li>
+        <li><a href="#labs" data-t="use-build">Build environments</a></li>
+      </ul>
+    </div>
+    <p class="tag tag--a"><b id="tag-input">VIDEO</b></p>
+    <div class="stage__to" aria-hidden="true">2</div>
+    <p class="tag tag--b"><b>GAME</b></p>
+    <div class="screen screen--a" id="screen-a">
+      <img class="screen__still" src="media/figures/hero-celeste-original.webp" alt="The original Celeste, Madeline at the start of Chapter 1" width="854" height="480">
+      <canvas aria-hidden="true"></canvas>
+      <div class="screen__repo" id="screen-repo" hidden>
+        <p class="screen__repo-name">Leonxlnx/claude-of-duty</p>
+        <ul>
+          <li>index.html</li>
+          <li>package.json</li>
+          <li>README.md</li>
+          <li>LICENSE</li>
+          <li>src/ai/Agent.js</li>
+          <li>src/combat/Combat.js</li>
+          <li>src/core/GameLoop.js</li>
+          <li>src/fx/Particles.js</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pipe" role="group" aria-label="How it works" data-t-aria="pipe-label">
+      <svg class="ico pipe__in" aria-hidden="true"><use href="#i-arrow"/></svg>
+      <ol class="pipe__steps" id="pipe-video">
+        <li><span class="kbd" aria-hidden="true">1</span><span data-t="pipe-watch">Watch</span></li>
+        <li><span class="kbd" aria-hidden="true">2</span><span data-t="pipe-build">Build</span></li>
+        <li><span class="kbd" aria-hidden="true">3</span><span data-t="pipe-replay">Replay</span></li>
+        <li><span class="kbd" aria-hidden="true">4</span><span data-t="pipe-judge">Judge</span></li>
+      </ol>
+      <ol class="pipe__steps" id="pipe-repo" hidden>
+        <li><span class="kbd" aria-hidden="true">1</span><span data-t="step-run">Run</span></li>
+        <li><span class="kbd" aria-hidden="true">2</span><span data-t="step-record">Record</span></li>
+        <li><span class="kbd" aria-hidden="true">3</span><span data-t="step-rebuild">Rebuild</span></li>
+        <li><span class="kbd" aria-hidden="true">4</span><span data-t="step-vary">Vary</span></li>
+      </ol>
+      <svg class="ico pipe__out" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </div>
+    <div class="screen screen--b" id="screen-b">
+      <img class="screen__still" src="media/figures/hero-celeste-recreation.webp" alt="The recreation of the same screen at the same input time" width="854" height="480">
+      <canvas aria-hidden="true"></canvas>
+    </div>
+  </div>
+</section>
+
+<section class="deck" id="deck" aria-label="The key presses both games receive" data-t-aria="deck-label">
+  <div class="deck__row wrap">
+    <button class="play-btn" id="hero-play" type="button" aria-label="Play"><svg class="ico"><use href="#i-play"/></svg></button>
+    <span class="deck__label" id="deck-label">SAME KEYS</span>
+    <div class="tokens" id="hero-tokens" aria-hidden="true"><div class="tokens__strip"></div></div>
+  </div>
+  <input class="seek" id="hero-seek" type="range" min="0" max="10" step="0.05" value="0" aria-label="Seek through the recording" data-t-aria="seek-label">
+</section>
+
+<section class="roster" aria-label="Tasks" data-t-aria="roster-label">
+  <div class="wrap roster__grid">
+    <div class="task">
+      <p class="task__name" id="task-video">VIDEO 2 GAME</p>
+      <div class="tiles tiles--video" role="group" aria-labelledby="task-video">
+        <button class="tile" type="button" data-game="celeste" aria-pressed="true">
+          <img src="media/figures/hero-celeste-recreation.webp" alt="" width="854" height="480">
+          <span class="tile__name" data-t="game-celeste">Celeste</span>
+        </button>
+        <button class="tile" type="button" data-game="sf6" aria-pressed="false">
+          <img src="media/figures/hero-sf6-recreation.webp" alt="" width="854" height="480">
+          <span class="tile__name" data-t="game-sf6">Street Fighter 6</span>
+        </button>
+        <button class="tile" type="button" data-game="sekiro" aria-pressed="false">
+          <img src="media/figures/sekiro-fire-recreation.webp" alt="" width="640" height="360">
+          <span class="tile__name" data-t="game-sekiro">Sekiro</span>
+        </button>
+        <button class="tile" type="button" data-game="pvz" aria-pressed="false">
+          <img src="media/figures/pvz-wave-recreation.webp" alt="" width="640" height="360">
+          <span class="tile__name" data-t="game-pvz">Plants vs. Zombies</span>
+        </button>
+      </div>
+    </div>
+    <div class="task">
+      <p class="task__name" id="task-repo">REPO 2 GAME</p>
+      <div class="tiles" role="group" aria-labelledby="task-repo">
+        <button class="tile" type="button" data-game="repo" aria-pressed="false">
+          <img src="media/figures/repo-rebuild.webp" alt="" width="960" height="540">
+          <span class="tile__name">Claude of Duty</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="video">
+  <div class="wrap">
+    <h2>VIDEO 2 GAME</h2>
+    <p class="pitch" data-t="video-lead">Same keys on both. Same thing happens.</p>
+
+    <article class="sheet" id="celeste">
+      <header class="sheet__head">
+        <h3 data-t="game-celeste">Celeste</h3>
+        <p data-t="celeste-band">Chapter 1 in 2 h 21 min</p>
+        <label class="sr-only" for="celeste-picker" data-t="picker-label">Recording</label>
+        <select id="celeste-picker"></select>
+      </header>
+      <div id="celeste-player"></div>
+      <div class="tally" id="celeste-tally"></div>
+      <details class="verdicts">
+        <summary><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg><span id="celeste-summary"></span></summary>
+        <div id="celeste-verdicts"></div>
+      </details>
+      <div class="eval">
+        <h4 class="claim" id="celeste-claim"></h4>
+        <p class="note" id="celeste-method"></p>
+      </div>
+    </article>
+
+    <article class="sheet" aria-labelledby="more-title">
+      <header class="sheet__head"><h3 id="more-title" data-t="more-title">More games</h3></header>
+      <div class="matrix">
+        <p class="matrix__label matrix__label--a" aria-hidden="true" data-t="label-a"><b>1P</b>ORIGINAL</p>
+        <p class="matrix__label matrix__label--b" aria-hidden="true" data-t="label-b"><b>2P</b>RECREATION</p>
+        <div class="cell" id="sf6">
+          <h4 data-t="game-sf6">Street Fighter 6</h4>
+          <figure><img src="media/figures/hero-sf6-original.webp" alt="The original: Ryu throwing a Hadoken at Ken" data-t-alt="alt-sf6-a" width="854" height="480" loading="lazy"><canvas aria-hidden="true"></canvas><figcaption>1P</figcaption></figure>
+          <figure><img src="media/figures/hero-sf6-recreation.webp" alt="The recreation at the same input time" data-t-alt="alt-sf6-b" width="854" height="480" loading="lazy"><canvas aria-hidden="true"></canvas><figcaption>2P</figcaption><button class="icon-btn icon-btn--play cell__play" type="button" aria-label="Play"></button></figure>
+          <p data-t="cell-sf6">Same keys, same Hadoken.</p>
+        </div>
+        <div class="cell" id="sekiro">
+          <h4 data-t="game-sekiro">Sekiro</h4>
+          <figure><img src="media/figures/sekiro-fire-original.webp" alt="The original: a band of flame sweeping across the rooftop" data-t-alt="alt-sekiro-a" width="640" height="360" loading="lazy"><figcaption>1P</figcaption></figure>
+          <figure><img src="media/figures/sekiro-fire-recreation.webp" alt="The recreation: a band of flame sweeping across the rooftop" data-t-alt="alt-sekiro-b" width="640" height="360" loading="lazy"><figcaption>2P</figcaption></figure>
+          <p data-t="cell-sekiro">388 of 396 build checks pass. <a href="https://www.youtube.com/watch?v=YrC16-UPJiE&amp;t=123s" target="_blank" rel="noopener">Original</a></p>
+        </div>
+        <div class="cell" id="pvz">
+          <h4 data-t="game-pvz">Plants vs. Zombies</h4>
+          <figure><img src="media/figures/pvz-wave-original.webp" alt="The original: the full pool board with the huge wave warning across it" data-t-alt="alt-pvz-a" width="640" height="360" loading="lazy"><figcaption>1P</figcaption></figure>
+          <figure><img src="media/figures/pvz-wave-recreation.webp" alt="The recreation: the full pool board with the huge wave warning across it" data-t-alt="alt-pvz-b" width="640" height="360" loading="lazy"><figcaption>2P</figcaption></figure>
+          <p data-t="cell-pvz">Sun, plants and waves, in plain Canvas. <a href="https://www.youtube.com/watch?v=3WhItByKVFo&amp;t=550s" target="_blank" rel="noopener">Original</a></p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="page page--flush" id="repo">
+  <div class="wrap">
+    <h2>REPO 2 GAME</h2>
+    <p class="pitch" data-t="repo-pitch">Turn any game repo into a playable, variable game.</p>
+    <div class="flow">
+      <div>
+        <h3>REPO IN</h3>
+        <div class="flow__in">
+        <div class="flow__card">
+          <a class="flow__repo" href="https://github.com/Leonxlnx/claude-of-duty" target="_blank" rel="noopener">Leonxlnx/claude-of-duty</a>
+          <ul>
+            <li>index.html</li>
+            <li>package.json</li>
+            <li>src/core/GameLoop.js</li>
+          </ul>
+        </div>
+        <p class="flow__label" data-t="repo-supports">Supports</p>
+        <ul class="engines">
+          <li>Godot</li>
+          <li>Unity</li>
+          <li>Unreal</li>
+          <li>Blender</li>
+          <li>three.js</li>
+        </ul>
+        </div>
+      </div>
+      <div class="flow__arrow" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></div>
+      <div>
+        <h3 data-t="pipeline">PIPELINE</h3>
+        <ol class="flow__steps">
+          <li><span class="kbd" aria-hidden="true">1</span><span data-t="step-run">Run</span></li>
+          <li><span class="kbd" aria-hidden="true">2</span><span data-t="step-record">Record</span></li>
+          <li><span class="kbd" aria-hidden="true">3</span><span data-t="step-rebuild">Rebuild</span></li>
+          <li><span class="kbd" aria-hidden="true">4</span><span data-t="step-vary">Vary</span></li>
+        </ol>
+      </div>
+      <div class="flow__arrow flow__arrow--out" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></div>
+      <div class="flow__out">
+        <h3>GAME OUT</h3>
+        <img class="flow__shot" src="media/figures/repo-cover.webp" alt="The Repo2Game workbench playing the shooter a coding agent rebuilt" data-t-alt="alt-cover" width="1440" height="1120" loading="lazy">
+      </div>
+    </div>
+    <p class="claim flow-claim" data-t="repo-note">720-byte brief. One screenshot. 46 minutes.</p>
+    <div class="labs" id="labs">
+      <h3 data-t="nav-labs">For model labs</h3>
+      <p class="pitch pitch--small" data-t="labs-lead">Game environments in bulk: repo after repo, variant after variant.</p>
+    </div>
+  </div>
+</section>
+
+<section class="finale" aria-labelledby="finale-title">
+  <div class="finale__grid wrap">
+    <h2 id="finale-title" data-t="finale-title">PASS IT ON</h2>
+    <button class="copy-link" type="button" data-copy-link data-t="Copy link">Copy link</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="brand"><i aria-hidden="true"></i>GAME-ANYTHING</p>
+    <p data-t="footer">All games belong to their owners, who are not affiliated with this project. Footage appears for research comparison.</p>
+  </div>
+</footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/zh.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>
