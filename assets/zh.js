@@ -82,7 +82,7 @@ window.SITE_ZH = {
   "alt-pvz-b": "复刻版：泳池关卡，屏幕上是一大波僵尸的提示",
   "alt-gta-a": "原版 GTA V：吉普车驶过海滨公路",
   "alt-gta-b": "复刻版，同一段流程的同一时刻",
-  "cell-gta": "<span>同样的输入，持续 4 分钟。</span><span>254 项评审检查通过 209 项。</span>",
+  "cell-gta": "<span>同样的输入跑满 4 分钟，这里是精选片段。</span><span>254 项评审检查通过 209 项。</span><span><a href=\"https://www.youtube.com/watch?v=ic1dJaBBTd4&amp;t=3460s\" target=\"_blank\" rel=\"noopener\">原版</a> · <a href=\"https://huggingface.co/datasets/nvidia/NitroGen\" target=\"_blank\" rel=\"noopener\">NitroGen</a></span>",
   "game-cyberpunk": "赛博朋克 2077",
   "alt-cyberpunk-a": "原版赛博朋克 2077：Hometown Deli 自动售货机",
   "alt-cyberpunk-b": "复刻版，同一段流程的同一时刻",

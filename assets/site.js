@@ -600,7 +600,7 @@
     }
   }
 
-  /* Street Fighter 6 in the matrix: one video on two canvases, like the stage, so the halves stay in step. */
+  /* Live clips in the matrix: one video on two canvases, like the stage, so the halves stay in step. */
   const startReel = (root, clips) => {
     const contexts = [...root.querySelectorAll("canvas")].map((canvas) => canvas.getContext("2d"));
     const button = $(".cell__play", root);
@@ -663,6 +663,7 @@
     }, { threshold: 0.3 }).observe(root);
   };
   startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
+  startReel($("#gta"), [{ src: "media/gta/highlights.mp4" }]);
 
   /* Celeste: one long take, then every recording whose outcome checks all pass, so the set follows the judge's results. */
   const LONG_TAKE = "fullgame";
