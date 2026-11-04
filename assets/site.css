@@ -80,6 +80,7 @@ h3 { font: italic 800 40px/1.05 var(--display); letter-spacing: -.005em; text-wr
 .pitch { margin-top: 8px; font: italic 800 40px/1.05 var(--display); letter-spacing: -.005em; text-wrap: balance; }
 /* Chinese breaks between phrases, never inside one. */
 .pitch span, .cell > p span { display: inline-block; }
+.pitch--lead { margin: 0 0 40px; }
 .note { font: 500 15px/1.5 var(--body); color: var(--soft); }
 
 /* Navigation */

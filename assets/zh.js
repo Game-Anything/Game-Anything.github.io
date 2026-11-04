@@ -8,6 +8,7 @@ window.SITE_ZH = {
 
   "stage-label": "Game-Anything 做什么，以及一个例子",
   "intro-tag": "输入任何东西，输出能玩的游戏。",
+  "page-lead": "Agent 流水线：一个 skill，什么都能变成游戏。",
   "intro-line": "给编程 Agent 用的 skill 和框架。",
   "The original Celeste, Madeline at the start of Chapter 1": "原版蔚蓝，玛德琳在第 1 章开头",
   "The recreation of the same screen at the same input time": "同一画面的复刻版，同一输入时刻",
@@ -45,7 +46,6 @@ window.SITE_ZH = {
   "game-sekiro": "只狼",
   "game-pvz": "植物大战僵尸",
 
-  "video-lead": "<span>两边按同样的键，</span><span>发生同样的事。</span>",
   "celeste-band": "第 1 章，2 小时 21 分钟",
 
 
@@ -88,7 +88,6 @@ window.SITE_ZH = {
   "why:Berry landing": "到 7.2 秒，两边都带着草莓落到弹簧柱左侧的安全雪地平台上，并站稳。",
   "why:Berry completion": "落地后，复刻版跟随的草莓消失，7.4 秒前出现 1000 分。原版同样在站稳后完成收集。",
 
-  "more-title": "更多游戏",
   "alt-sf6-a": "原版：隆向肯发出波动拳",
   "alt-sf6-b": "复刻版，同一输入时刻",
   "alt-sekiro-a": "原版：一道火焰扫过屋顶",
