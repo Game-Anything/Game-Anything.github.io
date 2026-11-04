@@ -46,7 +46,7 @@ window.SITE_ZH = {
   "game-sekiro": "只狼",
   "game-pvz": "植物大战僵尸",
 
-  "celeste-band": "第 1 章，2 小时 21 分钟",
+  "celeste-band": "来自 Video 2 Game · 第 1 章，2 小时 21 分钟",
 
 
   "example-title": "例子：抓草莓",
