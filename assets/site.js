@@ -673,10 +673,13 @@
   const neverSeen = highlights.filter((clip) => clip.group === "hidden");
   const seen = highlights.filter((clip) => clip.group === "public");
   const renderEval = () => {
-    $("#celeste-claim").textContent = fill(tr("{n} recordings pass every outcome check. The agent never saw {hidden} of them."),
+    const claim = fill(tr("{n} recordings pass every outcome check. The agent never saw {hidden} of them."),
       { n: highlights.length, hidden: neverSeen.length });
-    $("#celeste-method").textContent = fill(tr("{checks} judge checks across {recordings} same-key recordings."),
-      DATA.counts);
+    const method = fill(tr("{checks} judge checks across {recordings} same-key recordings."), DATA.counts);
+    $("#celeste-claim").textContent = claim;
+    $("#celeste-method").textContent = method;
+    $("#repo-eval-claim").textContent = claim;
+    $("#repo-eval-scale").textContent = method;
   };
   renderEval();
   onLanguage.push(renderEval);
