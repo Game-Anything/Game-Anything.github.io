@@ -117,7 +117,8 @@ window.SITE_ZH = {
 
   "finale-title": "传下去",
   "footer-role": "负责人 / 主要联系人",
-  "footer": "所有游戏归各自所有者，他们与本项目无关。画面仅用于研究对比。",
+  "footer": "Game-Anything 是非商业的研究项目。所有数据集都来自开源数据集或网络视频。本项目仅用于研究和开发。",
+  "footer-rights": "所有游戏和画面归各自所有者所有。权利方如需移除任何内容，请联系 <a href=\"mailto:zhangwj.charlie@gmail.com\">zhangwj.charlie@gmail.com</a>。",
 
   "1P ORIGINAL": "1P 原版",
   "2P RECREATION": "2P 复刻",

@@ -346,11 +346,12 @@ h3 { font: italic 800 40px/1.05 var(--display); letter-spacing: -.005em; text-wr
 
 .footer { padding: 28px 0; background: var(--ink); color: var(--soft-on-ink); font: 500 14.5px/1.5 var(--body); }
 .footer .brand { color: var(--paper); font-size: 21px; margin-bottom: 8px; }
-.footer p:last-child { max-width: 86ch; }
+.footer__note { max-width: 86ch; }
+.footer__note + .footer__note { margin-top: 4px; }
 .footer__contact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-bottom: 8px; font-size: 15.5px; }
 .footer__contact b { color: var(--paper); font-weight: 800; }
-.footer__contact a { color: var(--paper); }
-.footer__contact a:hover { color: var(--cursor); }
+.footer a { color: var(--paper); }
+.footer a:hover { color: var(--cursor); }
 
 /* Compare player */
 .player { min-width: 0; overflow: hidden; background: var(--ink); color: var(--paper); }
