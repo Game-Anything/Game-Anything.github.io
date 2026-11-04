@@ -418,7 +418,7 @@
         "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
       }, icon("chevrons")), "aria-label", "Wipe position");
       this.bigPlay = bind(el("button", { class: "player__big", type: "button" }, icon("play")), "aria-label", "Play");
-      this.message = bind(el("div", { class: "player__msg", hidden: "" }), null, "This clip could not be loaded. Check your connection and pick it again.");
+      this.message = bind(el("div", { class: "player__msg", hidden: "" }), null, "This clip could not be loaded. Check your connection and reload the page.");
       this.screen = el("div", { class: "player__screen" },
         this.video, this.canvas, this.wipeHandle,
         bind(el("span", { class: "player__tag player__tag--a" }), null, "1P ORIGINAL"),
@@ -665,31 +665,17 @@
   startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
   startReel($("#gta"), [{ src: "media/gta/highlights.mp4" }]);
 
-  /* Celeste: one long take, then every recording whose outcome checks all pass, so the set follows the judge's results. */
-  const LONG_TAKE = "fullgame";
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
   const passes = (verdicts) => verdicts.filter((verdict) => verdict.v === "pass").length;
-  const highlights = DATA.celeste
-    .filter((clip) => clip.id !== LONG_TAKE && outcomes(clip).length && passes(outcomes(clip)) === outcomes(clip).length)
-    .sort((a, b) => outcomes(b).length - outcomes(a).length);
-  const neverSeen = highlights.filter((clip) => clip.group === "hidden");
-  const seen = highlights.filter((clip) => clip.group === "public");
   const renderEval = () => {
-    const claim = fill(tr("{n} recordings pass every outcome check. The agent never saw {hidden} of them."),
-      { n: highlights.length, hidden: neverSeen.length });
-    const method = fill(tr("{checks} judge checks across {recordings} same-key recordings."), DATA.counts);
-    $("#celeste-claim").textContent = fill(tr("Eval: {claim}"), { claim });
-    $("#celeste-method").textContent = method;
-    $("#repo-eval-claim").textContent = claim;
-    $("#repo-eval-scale").textContent = method;
+    $("#celeste-eval").textContent = fill(tr("{checks} judge checks across {recordings} same-key recordings."), DATA.counts);
   };
   renderEval();
   onLanguage.push(renderEval);
 
-  const celestePlayer = new ComparePlayer($("#celeste-player"));
-
   /* Judge reasons name times in free text; turn the unambiguous ones into seek links. */
   const TIME = /\b(at|around|by|near|until|through|from|between|after|before)?\s?(\d{1,3}\.\d{1,2})(?:\s?(?:–|-|to|and)\s?(\d{1,3}\.\d{1,2}))?(\s?(?:seconds?|s)\b)?/g;
+  const TIME_ZH = /()(\d{1,3}\.\d{1,2})(?:\s?(?:–|-|到|至|和)\s?(\d{1,3}\.\d{1,2}))?(\s?秒)/g;
   const showMoment = (player, time) => {
     player.pause();
     player.seek(time);
@@ -703,7 +689,7 @@
   const renderReason = (text, clip, player) => {
     const parts = [];
     let cursor = 0;
-    for (const match of text.matchAll(TIME)) {
+    for (const match of text.matchAll(lang === "zh" ? TIME_ZH : TIME)) {
       const [whole, prefix, first, , unit] = match;
       const before = text.slice(Math.max(0, match.index - 14), match.index).toLowerCase();
       if (!(prefix || unit) || /(within|roughly|offset of|interval of|about|approximately)\s*$/.test(before)) continue;
@@ -718,102 +704,62 @@
     return parts;
   };
 
-  const picker = $("#celeste-picker");
-  const tallyBox = $("#celeste-tally");
-  const verdictsBox = $(".verdicts");
-  const summary = $("#celeste-summary");
-  const list = $("#celeste-verdicts");
-  const VERDICT_ORDER = { pass: 0, unknown: 1, fail: 2 };
   const renderTally = (box, clip) => {
     const checks = outcomes(clip);
     box.textContent = fill(tr("{pass} of {total} outcome checks pass"), { pass: passes(checks), total: checks.length });
     if (clip.group === "hidden") box.append(el("small", { text: tr("The agent never saw this one.") }));
   };
-  const verdictRows = (clip, player) => {
-    const rows = [el("p", { class: "verdicts__note", text: tr("Outcome: did the same thing happen? Visual: does it look the same? The agent draws its own art.") })];
-    if (lang === "zh") rows.push(el("p", { class: "verdicts__note", text: ZH["judge-english"] }));
-    for (const verdict of [...clip.verdicts].sort((a, b) => VERDICT_ORDER[a.v] - VERDICT_ORDER[b.v])) {
-      rows.push(el("div", { class: "verdict" },
-        el("span", { class: "verdict__chip", "data-v": verdict.v, text: tr(verdict.v) }),
-        el("div", { class: "verdict__head" }, el("b", { text: verdict.title }), el("span", { text: tr(verdict.focus) })),
-        el("div", { class: "verdict__body" }, ...renderReason(verdict.r, clip, player))));
-    }
-    return rows;
-  };
-  let recording = null;
-  const renderRecording = () => {
-    const clip = recording;
-    verdictsBox.hidden = clip.id === LONG_TAKE;
-    if (clip.id === LONG_TAKE) {
-      tallyBox.textContent = tr("Over a minute: same rooms, same strawberries.");
-      return;
-    }
-    renderTally(tallyBox, clip);
-    summary.textContent = fill(tr("Read all {n} verdicts"), { n: clip.verdicts.length });
-    list.replaceChildren(...verdictRows(clip, celestePlayer));
-  };
-  const selectRecording = (id, options = {}) => {
-    recording = celesteClip(id);
-    celestePlayer.load(recording, { play: options.play ?? false });
-    picker.value = id;
-    renderRecording();
-  };
-  const renderPicker = () => {
-    const chosen = picker.value;
-    const options = (clips) => clips.map((clip) => el("option", { value: clip.id, text: tr(clip.label) }));
-    picker.replaceChildren(...options([celesteClip(LONG_TAKE)]),
-      ...[[neverSeen, "The agent never saw these"], [seen, "The agent saw these"]].map(([clips, label]) =>
-        el("optgroup", { label: tr(label) }, ...options(clips))));
-    picker.value = chosen;
-  };
-  renderPicker();
-  picker.addEventListener("change", () => selectRecording(picker.value, { play: true }));
-  selectRecording(LONG_TAKE);
-  onLanguage.push(renderPicker, renderRecording);
 
-  /* The eval example: a recording the agent never saw, with the judge's outcome checks in the order they happen. The current one follows playback. */
+  /* The eval example: a recording the agent never saw, with every one of the judge's checks, passes and failures, in the order they happen.
+     Each folds open on its reason, and the current one follows playback. Checks whose reason names no time come last. */
   const exampleClip = celesteClip("ckpt0-berry");
   const examplePlayer = new ComparePlayer($("#example-player"));
-  const exampleChecks = outcomes(exampleClip)
-    .map((verdict) => ({ verdict, at: parseFloat(verdict.r.match(/\d+\.\d+/)?.[0] ?? 0) }))
-    .sort((a, b) => a.at - b.at);
+  const exampleChecks = exampleClip.verdicts
+    .map((verdict) => ({ verdict, at: parseFloat(verdict.r.match(/\d+\.\d+/)?.[0]) || null }))
+    .sort((a, b) => (a.at ?? Infinity) - (b.at ?? Infinity) || (b.verdict.focus === "Outcome") - (a.verdict.focus === "Outcome"));
+  const timedChecks = exampleChecks.filter(({ at }) => at !== null);
+  const openChecks = new Set();
   let exampleNow = Math.max(0, exampleChecks.findIndex(({ verdict }) => verdict.title === "Berry contact"));
   const showExampleNow = () => {
     [...$("#example-checks").children].forEach((row, index) => {
-      if (index === exampleNow) row.firstChild.setAttribute("aria-current", "true");
-      else row.firstChild.removeAttribute("aria-current");
+      const summary = row.firstChild.firstChild;
+      if (index === exampleNow) summary.setAttribute("aria-current", "true");
+      else summary.removeAttribute("aria-current");
     });
-    [...$("#example-why").children].forEach((reason, index) => reason.toggleAttribute("data-now", index === exampleNow));
   };
   const followExample = () => {
     const t = examplePlayer.video.currentTime + 0.05;
-    const index = Math.max(0, exampleChecks.findLastIndex(({ at }) => at <= t));
-    if (index === exampleNow) return;
-    exampleNow = index;
+    const moment = timedChecks.findLast(({ at }) => at <= t) ?? timedChecks[0];
+    if (exampleChecks[exampleNow].at === moment.at) return;
+    exampleNow = exampleChecks.findIndex(({ at }) => at === moment.at);
     showExampleNow();
   };
   const renderExample = () => {
     renderTally($("#example-tally"), exampleClip);
     $("#example-checks").replaceChildren(...exampleChecks.map(({ verdict, at }, index) => el("li", {},
-      el("button", { class: "check", type: "button", onclick: () => {
+      el("details", {
+        class: "check",
+        ontoggle: (event) => (event.currentTarget.open ? openChecks.add(verdict.title) : openChecks.delete(verdict.title)),
+        ...(openChecks.has(verdict.title) ? { open: "" } : {}),
+      },
+      el("summary", { onclick: (event) => {
+        if (event.currentTarget.parentElement.open || at === null) return;
         exampleNow = index;
         showExampleNow();
-        showMoment(examplePlayer, at);
+        examplePlayer.pause();
+        examplePlayer.seek(at);
       } },
       el("span", { class: "verdict__chip", "data-v": verdict.v, text: tr(verdict.v) }),
-      el("b", { text: tr(verdict.title, `check:${verdict.title}`) }),
-      el("span", { class: "check__at", text: clock(at) })))));
-    $("#example-why").replaceChildren(...exampleChecks.map(({ verdict }) => el("p", {},
-      el("b", { text: tr("Judge: ") }), tr(verdict.r, `why:${verdict.title}`))));
+      el("span", { class: "check__name" }, el("b", { text: tr(verdict.title, `check:${verdict.title}`) }), el("small", { text: tr(verdict.focus) })),
+      el("span", { class: "check__at", text: at === null ? "" : clock(at) }),
+      icon("chevron")),
+      el("div", { class: "check__why" }, el("b", { text: tr("Judge: ") }), ...renderReason(tr(verdict.r, `why:${verdict.title}`), exampleClip, examplePlayer))))));
     showExampleNow();
-    $("#example-summary").textContent = fill(tr("Read all {n} verdicts"), { n: exampleClip.verdicts.length });
-    $("#example-list").replaceChildren(...verdictRows(exampleClip, examplePlayer));
+    $("#example-note").textContent = tr("Outcome: did the same thing happen? Visual: does it look the same? The agent draws its own art.");
   };
   renderExample();
   onLanguage.push(renderExample);
   examplePlayer.onSync = () => { if (!examplePlayer.video.paused) followExample(); };
   examplePlayer.video.addEventListener("seeked", followExample);
-  examplePlayer.video.addEventListener("play", () => celestePlayer.pause());
-  celestePlayer.video.addEventListener("play", () => examplePlayer.pause());
   examplePlayer.load(exampleClip, { play: !reducedMotion });
 })();

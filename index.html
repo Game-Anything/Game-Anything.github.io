@@ -38,7 +38,6 @@
     <div class="nav__links">
       <a href="#video">Video 2 Game</a>
       <a href="#repo">Repo 2 Game</a>
-      <a href="#labs" data-t="nav-labs">For model labs</a>
     </div>
     <button class="lang-btn" type="button" id="lang-toggle"></button>
   </div>
@@ -56,8 +55,8 @@
       </div>
       <ul class="intro__for">
         <li><a href="#video" data-t="use-make">Make games</a></li>
-        <li><a href="#celeste-eval" data-t="use-test">Test coding agents</a></li>
-        <li><a href="#labs" data-t="use-build">Build environments</a></li>
+        <li><a href="#eval" data-t="use-test">Test coding agents</a></li>
+        <li><a href="#repo" data-t="use-build">Build environments</a></li>
       </ul>
     </div>
     <p class="tag tag--a"><b id="tag-input">VIDEO</b></p>
@@ -153,42 +152,6 @@
     <h2>VIDEO 2 GAME</h2>
     <p class="pitch" data-t="video-lead">Same keys on both. Same thing happens.</p>
 
-    <article class="sheet" id="celeste">
-      <header class="sheet__head">
-        <h3 data-t="game-celeste">Celeste</h3>
-        <p data-t="celeste-band">Chapter 1 in 2 h 21 min</p>
-        <label class="sr-only" for="celeste-picker" data-t="picker-label">Recording</label>
-        <select id="celeste-picker"></select>
-      </header>
-      <div id="celeste-player"></div>
-      <div class="tally" id="celeste-tally"></div>
-      <details class="verdicts">
-        <summary><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg><span id="celeste-summary"></span></summary>
-        <div class="verdicts__list" id="celeste-verdicts"></div>
-      </details>
-      <div class="eval" id="celeste-eval">
-        <h4 class="claim" id="celeste-claim"></h4>
-        <p class="note" id="celeste-method"></p>
-      </div>
-      <div class="example" id="eval-example">
-        <header class="example__head">
-          <h4 data-t="example-title">Example: the strawberry</h4>
-          <p class="tally" id="example-tally"></p>
-        </header>
-        <div class="example__grid">
-          <div>
-            <div id="example-player"></div>
-            <div class="example__why" id="example-why"></div>
-          </div>
-          <ol class="checks" id="example-checks"></ol>
-        </div>
-        <details class="verdicts">
-          <summary><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg><span id="example-summary"></span></summary>
-          <div class="verdicts__list" id="example-list"></div>
-        </details>
-      </div>
-    </article>
-
     <article class="sheet" aria-labelledby="more-title">
       <header class="sheet__head"><h3 id="more-title" data-t="more-title">More games</h3></header>
       <div class="matrix">
@@ -270,16 +233,32 @@
         <img class="flow__shot" src="media/figures/repo-cover.webp" alt="The Repo2Game workbench playing the shooter a coding agent rebuilt" data-t-alt="alt-cover" width="1440" height="1120" loading="lazy">
       </div>
     </div>
-    <p class="claim flow-claim" data-t="repo-note">720-byte brief. One screenshot. 46 minutes.</p>
-    <div class="repo-eval">
-      <h3 data-t="repo-eval-title">Eval</h3>
-      <p class="pitch pitch--small" data-t="repo-eval-lead">Same keys on the rebuild. A judge checks if the same thing happens.</p>
-      <p class="tally"><span data-t="repo-eval-example">Example from Video 2 Game: <a href="#eval-example">Celeste</a>.</span><span id="repo-eval-claim"></span><small id="repo-eval-scale"></small></p>
-    </div>
-    <div class="labs" id="labs">
-      <h3 data-t="nav-labs">For model labs</h3>
-      <p class="pitch pitch--small" data-t="labs-lead">Game environments in bulk: repo after repo, variant after variant.</p>
-    </div>
+  </div>
+</section>
+
+<section class="page page--flush" id="eval">
+  <div class="wrap">
+    <h2 data-t="eval-title">EVAL</h2>
+    <article class="sheet" id="celeste">
+      <header class="sheet__head">
+        <h3 data-t="game-celeste">Celeste</h3>
+        <p data-t="celeste-band">Chapter 1 in 2 h 21 min</p>
+      </header>
+      <p class="note" id="celeste-eval"></p>
+      <div class="example" id="eval-example">
+        <header class="example__head">
+          <h4 data-t="example-title">Example: the strawberry</h4>
+          <p class="tally" id="example-tally"></p>
+        </header>
+        <div class="example__grid">
+          <div id="example-player"></div>
+          <div>
+            <ol class="checks" id="example-checks"></ol>
+            <p class="checks__note" id="example-note"></p>
+          </div>
+        </div>
+      </div>
+    </article>
   </div>
 </section>
 
@@ -295,6 +274,7 @@
 <footer class="footer">
   <div class="wrap">
     <p class="brand"><i aria-hidden="true"></i>GAME-ANYTHING</p>
+    <p class="footer__contact"><b>Weijia Zhang</b><span data-t="footer-role">Lead / Main Contact</span><a href="mailto:zhangwj.charlie@gmail.com">zhangwj.charlie@gmail.com</a></p>
     <p data-t="footer">All games belong to their owners, who are not affiliated with this project. Footage appears for research comparison.</p>
   </div>
 </footer>
