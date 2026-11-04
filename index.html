@@ -56,7 +56,7 @@
       </div>
       <ul class="intro__for">
         <li><a href="#video" data-t="use-make">Make games</a></li>
-        <li><a href="#celeste" data-t="use-test">Test coding agents</a></li>
+        <li><a href="#celeste-eval" data-t="use-test">Test coding agents</a></li>
         <li><a href="#labs" data-t="use-build">Build environments</a></li>
       </ul>
     </div>
@@ -164,11 +164,28 @@
       <div class="tally" id="celeste-tally"></div>
       <details class="verdicts">
         <summary><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg><span id="celeste-summary"></span></summary>
-        <div id="celeste-verdicts"></div>
+        <div class="verdicts__list" id="celeste-verdicts"></div>
       </details>
-      <div class="eval">
+      <div class="eval" id="celeste-eval">
         <h4 class="claim" id="celeste-claim"></h4>
         <p class="note" id="celeste-method"></p>
+      </div>
+      <div class="example" id="eval-example">
+        <header class="example__head">
+          <h4 data-t="example-title">Example: the strawberry</h4>
+          <p class="tally" id="example-tally"></p>
+        </header>
+        <div class="example__grid">
+          <div>
+            <div id="example-player"></div>
+            <div class="example__why" id="example-why"></div>
+          </div>
+          <ol class="checks" id="example-checks"></ol>
+        </div>
+        <details class="verdicts">
+          <summary><svg class="ico" aria-hidden="true"><use href="#i-chevron"/></svg><span id="example-summary"></span></summary>
+          <div class="verdicts__list" id="example-list"></div>
+        </details>
       </div>
     </article>
 
@@ -257,7 +274,7 @@
     <div class="repo-eval">
       <h3 data-t="repo-eval-title">Eval</h3>
       <p class="pitch pitch--small" data-t="repo-eval-lead">Same keys on the rebuild. A judge checks if the same thing happens.</p>
-      <p class="tally"><span data-t="repo-eval-example">Example from Video 2 Game: <a href="#celeste">Celeste</a>.</span><span id="repo-eval-claim"></span><small id="repo-eval-scale"></small></p>
+      <p class="tally"><span data-t="repo-eval-example">Example from Video 2 Game: <a href="#eval-example">Celeste</a>.</span><span id="repo-eval-claim"></span><small id="repo-eval-scale"></small></p>
     </div>
     <div class="labs" id="labs">
       <h3 data-t="nav-labs">For model labs</h3>

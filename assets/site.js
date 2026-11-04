@@ -558,6 +558,7 @@
       this.seekInput.value = String(t);
       this.seekInput.style.setProperty("--pct", `${(t / this.duration()) * 100}%`);
       this.draw();
+      this.onSync?.();
     }
 
     loop() {
@@ -676,7 +677,7 @@
     const claim = fill(tr("{n} recordings pass every outcome check. The agent never saw {hidden} of them."),
       { n: highlights.length, hidden: neverSeen.length });
     const method = fill(tr("{checks} judge checks across {recordings} same-key recordings."), DATA.counts);
-    $("#celeste-claim").textContent = claim;
+    $("#celeste-claim").textContent = fill(tr("Eval: {claim}"), { claim });
     $("#celeste-method").textContent = method;
     $("#repo-eval-claim").textContent = claim;
     $("#repo-eval-scale").textContent = method;
@@ -688,16 +689,17 @@
 
   /* Judge reasons name times in free text; turn the unambiguous ones into seek links. */
   const TIME = /\b(at|around|by|near|until|through|from|between|after|before)?\s?(\d{1,3}\.\d{1,2})(?:\s?(?:–|-|to|and)\s?(\d{1,3}\.\d{1,2}))?(\s?(?:seconds?|s)\b)?/g;
-  const seekLink = (label, time) => el("button", {
+  const showMoment = (player, time) => {
+    player.pause();
+    player.seek(time);
+    const box = player.screen.getBoundingClientRect();
+    if (box.bottom < 120 || box.top > innerHeight - 120) player.node.scrollIntoView({ block: "center" });
+  };
+  const seekLink = (label, time, player) => el("button", {
     class: "time-link", type: "button", text: label, "aria-label": fill(tr("Seek to {s} seconds"), { s: time }),
-    onclick: () => {
-      celestePlayer.pause();
-      celestePlayer.seek(time);
-      const box = celestePlayer.screen.getBoundingClientRect();
-      if (box.bottom < 120 || box.top > innerHeight - 120) celestePlayer.node.scrollIntoView({ block: "center" });
-    },
+    onclick: () => showMoment(player, time),
   });
-  const renderReason = (text, clip) => {
+  const renderReason = (text, clip, player) => {
     const parts = [];
     let cursor = 0;
     for (const match of text.matchAll(TIME)) {
@@ -708,7 +710,7 @@
       if (time >= clip.duration) continue;
       const start = match.index + (prefix ? prefix.length + 1 : whole.length - whole.trimStart().length);
       parts.push(text.slice(cursor, start));
-      parts.push(seekLink(text.slice(start, match.index + whole.length).trim(), time));
+      parts.push(seekLink(text.slice(start, match.index + whole.length).trim(), time, player));
       cursor = match.index + whole.length;
     }
     parts.push(text.slice(cursor));
@@ -721,6 +723,22 @@
   const summary = $("#celeste-summary");
   const list = $("#celeste-verdicts");
   const VERDICT_ORDER = { pass: 0, unknown: 1, fail: 2 };
+  const renderTally = (box, clip) => {
+    const checks = outcomes(clip);
+    box.textContent = fill(tr("{pass} of {total} outcome checks pass"), { pass: passes(checks), total: checks.length });
+    if (clip.group === "hidden") box.append(el("small", { text: tr("The agent never saw this one.") }));
+  };
+  const verdictRows = (clip, player) => {
+    const rows = [el("p", { class: "verdicts__note", text: tr("Outcome: did the same thing happen? Visual: does it look the same? The agent draws its own art.") })];
+    if (lang === "zh") rows.push(el("p", { class: "verdicts__note", text: ZH["judge-english"] }));
+    for (const verdict of [...clip.verdicts].sort((a, b) => VERDICT_ORDER[a.v] - VERDICT_ORDER[b.v])) {
+      rows.push(el("div", { class: "verdict" },
+        el("span", { class: "verdict__chip", "data-v": verdict.v, text: tr(verdict.v) }),
+        el("div", { class: "verdict__head" }, el("b", { text: verdict.title }), el("span", { text: tr(verdict.focus) })),
+        el("div", { class: "verdict__body" }, ...renderReason(verdict.r, clip, player))));
+    }
+    return rows;
+  };
   let recording = null;
   const renderRecording = () => {
     const clip = recording;
@@ -729,19 +747,9 @@
       tallyBox.textContent = tr("Over a minute: same rooms, same strawberries.");
       return;
     }
-    const checks = outcomes(clip);
-    tallyBox.textContent = fill(tr("{pass} of {total} outcome checks pass"), { pass: passes(checks), total: checks.length });
-    if (clip.group === "hidden") tallyBox.append(el("small", { text: tr("The agent never saw this one.") }));
+    renderTally(tallyBox, clip);
     summary.textContent = fill(tr("Read all {n} verdicts"), { n: clip.verdicts.length });
-    const rows = [el("p", { class: "verdicts__note", text: tr("Outcome: did the same thing happen? Visual: does it look the same? The agent draws its own art.") })];
-    if (lang === "zh") rows.push(el("p", { class: "verdicts__note", text: ZH["judge-english"] }));
-    for (const verdict of [...clip.verdicts].sort((a, b) => VERDICT_ORDER[a.v] - VERDICT_ORDER[b.v])) {
-      rows.push(el("div", { class: "verdict" },
-        el("span", { class: "verdict__chip", "data-v": verdict.v, text: tr(verdict.v) }),
-        el("div", { class: "verdict__head" }, el("b", { text: verdict.title }), el("span", { text: tr(verdict.focus) })),
-        el("div", { class: "verdict__body" }, ...renderReason(verdict.r, clip))));
-    }
-    list.replaceChildren(...rows);
+    list.replaceChildren(...verdictRows(clip, celestePlayer));
   };
   const selectRecording = (id, options = {}) => {
     recording = celesteClip(id);
@@ -761,4 +769,50 @@
   picker.addEventListener("change", () => selectRecording(picker.value, { play: true }));
   selectRecording(LONG_TAKE);
   onLanguage.push(renderPicker, renderRecording);
+
+  /* The eval example: a recording the agent never saw, with the judge's outcome checks in the order they happen. The current one follows playback. */
+  const exampleClip = celesteClip("ckpt0-berry");
+  const examplePlayer = new ComparePlayer($("#example-player"));
+  const exampleChecks = outcomes(exampleClip)
+    .map((verdict) => ({ verdict, at: parseFloat(verdict.r.match(/\d+\.\d+/)?.[0] ?? 0) }))
+    .sort((a, b) => a.at - b.at);
+  let exampleNow = Math.max(0, exampleChecks.findIndex(({ verdict }) => verdict.title === "Berry contact"));
+  const showExampleNow = () => {
+    [...$("#example-checks").children].forEach((row, index) => {
+      if (index === exampleNow) row.firstChild.setAttribute("aria-current", "true");
+      else row.firstChild.removeAttribute("aria-current");
+    });
+    [...$("#example-why").children].forEach((reason, index) => reason.toggleAttribute("data-now", index === exampleNow));
+  };
+  const followExample = () => {
+    const t = examplePlayer.video.currentTime + 0.05;
+    const index = Math.max(0, exampleChecks.findLastIndex(({ at }) => at <= t));
+    if (index === exampleNow) return;
+    exampleNow = index;
+    showExampleNow();
+  };
+  const renderExample = () => {
+    renderTally($("#example-tally"), exampleClip);
+    $("#example-checks").replaceChildren(...exampleChecks.map(({ verdict, at }, index) => el("li", {},
+      el("button", { class: "check", type: "button", onclick: () => {
+        exampleNow = index;
+        showExampleNow();
+        showMoment(examplePlayer, at);
+      } },
+      el("span", { class: "verdict__chip", "data-v": verdict.v, text: tr(verdict.v) }),
+      el("b", { text: tr(verdict.title, `check:${verdict.title}`) }),
+      el("span", { class: "check__at", text: clock(at) })))));
+    $("#example-why").replaceChildren(...exampleChecks.map(({ verdict }) => el("p", {},
+      el("b", { text: tr("Judge: ") }), tr(verdict.r, `why:${verdict.title}`))));
+    showExampleNow();
+    $("#example-summary").textContent = fill(tr("Read all {n} verdicts"), { n: exampleClip.verdicts.length });
+    $("#example-list").replaceChildren(...verdictRows(exampleClip, examplePlayer));
+  };
+  renderExample();
+  onLanguage.push(renderExample);
+  examplePlayer.onSync = () => { if (!examplePlayer.video.paused) followExample(); };
+  examplePlayer.video.addEventListener("seeked", followExample);
+  examplePlayer.video.addEventListener("play", () => celestePlayer.pause());
+  celestePlayer.video.addEventListener("play", () => examplePlayer.pause());
+  examplePlayer.load(exampleClip, { play: !reducedMotion });
 })();
