@@ -663,6 +663,7 @@
     }, { threshold: 0.3 }).observe(root);
   };
   startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
+  startReel($("#elden"), [{ src: "media/elden/demo.mp4" }]);
   startReel($("#gta"), [{ src: "media/gta/highlights.mp4" }]);
 
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
