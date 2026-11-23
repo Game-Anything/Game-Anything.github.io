@@ -318,6 +318,11 @@ h3 { font: italic 800 40px/1.05 var(--display); letter-spacing: -.005em; text-wr
 .cell figure:nth-of-type(1) figcaption { background: var(--p1); }
 .cell figure:nth-of-type(2) figcaption { background: var(--p2); }
 .cell > p { margin-top: 4px; font: 700 15.5px/1.4 var(--body); }
+/* A game that has a build: its name, then PLAY, which opens the game in a new tab. */
+.cell__head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cell__game { flex: none; display: inline-flex; align-items: center; gap: 3px; padding: 5px 7px 5px 10px; background: var(--cursor); color: var(--ink); font: italic 800 15px/1 var(--display); letter-spacing: .03em; text-decoration: none; }
+.cell__game:hover { background: var(--ink); color: var(--cursor); }
+.cell__game .ico { font-size: 15px; rotate: 45deg; }
 .cell__play { position: absolute; right: 6px; bottom: 6px; }
 
 /* Repo 2 Game */

@@ -1,0 +1,2 @@
+# Game builds are stored byte for byte as games/unpack.py wrote them.
+games/** -text

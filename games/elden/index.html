@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><!-- Unpacked from Play-Radahn.html by games/unpack.py --><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>Promised Consort - Boss Encounter</title><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171810}canvas{display:block;width:100%;height:100%}#game[hidden]{display:none}#loading{position:absolute;inset:0;display:grid;place-content:center;color:#c9bea0;font:18px Georgia;text-align:center;letter-spacing:.08em}#loading small{display:block;margin-top:16px;font-size:13px;color:#948c79;letter-spacing:.02em}#loading{padding:24px}#loading button{justify-self:center;margin-top:20px;padding:10px 18px;border:0;cursor:pointer;background:#c9bea0;color:#171810;font:13px Georgia;letter-spacing:.08em}</style><script type="importmap">{"imports":{"game/":"./"}}</script></head><body><canvas id="game" hidden></canvas><div id="loading" role="status">ENIR-ILIM<small>Loading arena and characters...</small></div><script id="spark-license" type="text/plain">The MIT License
+
+Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.</script>
+<script>
+/* Web loader written by games/unpack.py. The packer pointed import.meta.url at an
+   offline host; fetch those paths from this folder instead. */
+(() => {
+  const OFFLINE = "radahn-offline.invalid";
+  const local = (value) => {
+    let url;
+    try { url = new URL(value, document.baseURI); } catch { return null; }
+    return url.hostname === OFFLINE ? new URL("." + url.pathname + url.search, document.baseURI).href : null;
+  };
+  const fetchOriginal = window.fetch.bind(window);
+  window.fetch = (input, options) => {
+    const href = local(typeof input === "string" ? input : input instanceof URL ? input.href : input?.url);
+    return href ? fetchOriginal(href, options) : fetchOriginal(input, options);
+  };
+  const src = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+  Object.defineProperty(HTMLImageElement.prototype, "src", { ...src, set(value) { src.set.call(this, local(String(value)) ?? value); } });
+})();
+</script>
+<script type="module">
+const box = document.querySelector("#loading");
+const status = box.querySelector("small");
+const waiting = status.textContent;
+const loaded = document.createElement("small");
+box.append(loaded);
+let bytes = 0;
+const meter = new PerformanceObserver((list) => {
+  if (!box.isConnected) return meter.disconnect();
+  for (const entry of list.getEntries()) bytes += entry.transferSize || entry.encodedBodySize || 0;
+  loaded.textContent = `${Math.round(bytes / 1e6)} MB loaded`;
+});
+meter.observe({ type: "resource", buffered: true });
+const start = () => import("game/src/game.js").catch((error) => {
+  status.textContent = "Unable to start. Open this page in a current desktop Chrome or Edge. " + error.message;
+  console.error(error);
+});
+/* Phones get a choice before the download: the game needs a keyboard and mouse, or a gamepad. */
+if (matchMedia("(pointer: coarse)").matches && !matchMedia("(any-pointer: fine)").matches) {
+  status.textContent = "This game needs a keyboard and mouse, or a gamepad. It downloads up to 199 MB.";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Load anyway";
+  button.addEventListener("click", () => {
+    button.remove();
+    status.textContent = waiting;
+    start();
+  });
+  box.append(button);
+} else start();
+</script></body></html>
