@@ -7,8 +7,7 @@ window.SITE_ZH = {
   "Select the link": "请选中链接",
   "Link to this page": "本页链接",
 
-  "hero-statement": "输入任何东西，<br>输出能玩的游戏。",
-  "hero-about": "给编程 Agent 用的 skill 和框架：给它一段游戏视频或一个游戏仓库，Agent 就能做出一个能玩的游戏。",
+  "hero-statement": "让编程 Agent<br>从视频重建游戏。",
   "label-original": "原版",
   "label-recreation": "复刻版",
   "Play": "播放",
