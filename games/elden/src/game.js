@@ -27,7 +27,7 @@ import {dressGravityRock,updateRockDress,createScrapeDust,prepareRockBursts,spaw
 import {EncounterAudio} from "game/src/audio.js";
 import {createPlayerAura,createSealFlare} from "game/src/player-aura.js";
 import {createHolyGathering,createRetreatWake,createRetreatMantle} from "game/src/holy-gathering.js";
-import {RenderQuality,optimizeBloom,skipInactivePointLights,sortLiveMaterials,shareRigPalettes,cacheSceneTransforms} from "game/src/render-quality.js";
+import {RenderQuality,optimizeBloom,skipInactivePointLights,sortLiveMaterials,shareRigPalettes,cacheSceneTransforms,partitionShadowDepth,separateInstancedPrograms,singlePassAdditive,uploadSceneGeometry} from "game/src/render-quality.js";
 import {prepareCompanion} from "game/src/companion.js";
 import {preparePortraitDetail} from "game/src/companion-fit.js";
 import {InputTimeline} from "game/src/input-timeline.js";
@@ -2194,7 +2194,7 @@ async function loadEncounter() {
   }
   status.textContent = 'Preparing lighting and combat effects...';
   await warmCombatMaterials();
-  if(!fixedResolution&&!recordedControls){shareRigPalettes(scene);sortLiveMaterials(renderer);cacheSceneTransforms(scene,T.Object3D.prototype);}
+  if(!fixedResolution&&!recordedControls){shareRigPalettes(scene);separateInstancedPrograms(scene);partitionShadowDepth(scene,T.MeshDepthMaterial);singlePassAdditive(T);uploadSceneGeometry(T,renderer,scene);sortLiveMaterials(renderer);cacheSceneTransforms(scene,T.Object3D.prototype);}
   keys.clear();
   eDown = -1;
   loaded = true;

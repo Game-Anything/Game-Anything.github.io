@@ -4,7 +4,7 @@ import * as T from "game/lib/three.module.js";
 // the shaft and keeps falling after its solid core has disappeared.
 // Reuses the full-height distribution studied in consort-meteor.js, without
 // importing that draft's action, flash or camera presentation.
-export function createColumnParticles(seed, duration, broad=false) {
+export function createColumnParticles(seed, duration, broad=false, reuse=null) {
   const count=broad?864:246, height=broad?46:34;
   const positions=[],seeds=[],viewport=new T.Vector4();
   const rnd=n=>{const v=Math.sin(seed*7.13+n*127.1)*43758.5453;return v-Math.floor(v);};
@@ -16,7 +16,11 @@ export function createColumnParticles(seed, duration, broad=false) {
   const geometry=new T.BufferGeometry();
   geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
   geometry.setAttribute('particleSeed',new T.Float32BufferAttribute(seeds,3));
-  const material=new T.ShaderMaterial({
+  // A retired column's material keeps its compiled program; reset its state.
+  if(reuse){
+    const u=reuse.uniforms;u.halfHeight.value=540;u.age.value=-1;u.duration.value=duration;u.opacity.value=1;
+  }
+  const material=reuse??new T.ShaderMaterial({
     uniforms:{halfHeight:{value:540},age:{value:-1},duration:{value:duration},opacity:{value:1}},
     transparent:true,depthWrite:false,blending:T.AdditiveBlending,
     vertexShader:`

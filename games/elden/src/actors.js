@@ -217,7 +217,7 @@ function sourceSwordGuard(){
 
 // Each loaded rig has a fixed bone map. Pose builders repeatedly resolve the
 // same suffixes while turning, including on chained IK and weapon updates.
-const rigMatches=new WeakMap();
+const rigMatches=new WeakMap(),footPoint=new T.Vector3();
 function matchRig(bones,pattern){
   let matches=rigMatches.get(bones);
   if(!matches){matches=new Map();rigMatches.set(bones,matches);}
@@ -1097,11 +1097,27 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
     factors[2*i]=f;factors[2*i+1]=this.capeBase[i*3]*(1.22/(1.22+1.58*Math.pow(f,.82)));
    }
    this.capeRestFactors=factors;
+   // Static phases of the sway, flare and loft ripple. Each frame adds its
+   // time term through the angle-sum identity instead of one sine per term.
+   const phases=new Float64Array(attribute.count*9);
+   for(let i=0;i<attribute.count;i++){
+    const x=this.capeBase[i*3],f=factors[2*i],j=i*9;
+    phases[j]=Math.sin(x*1.9-f*3.1);phases[j+1]=Math.cos(x*1.9-f*3.1);
+    phases[j+2]=Math.sin(x*4.3);phases[j+3]=Math.cos(x*4.3);
+    phases[j+4]=Math.sin(x*2.3);phases[j+5]=Math.cos(x*2.3);
+    phases[j+6]=Math.sin(x*1.7+f*2.4);phases[j+7]=Math.cos(x*1.7+f*2.4);
+    phases[j+8]=Math.sin(f*Math.PI*.9);
+   }
+   this.capePhases=phases;
   }
+  const phases=this.capePhases;
+  const sway1s=Math.sin(t*1.7),sway1c=Math.cos(t*1.7),sway2s=Math.sin(t*2.9),sway2c=Math.cos(t*2.9);
+  const flareS=Math.sin(t*2),flareC=Math.cos(t*2),rippleS=Math.sin(t*3.1),rippleC=Math.cos(t*3.1);
+  let hangF=NaN,hangK=0,hangW=1;
   const springCount=grid?grid.anchors.length:attribute.count;
   for(let spring=0;spring<springCount;spring++){
    const i=grid?grid.anchors[spring]:spring;
-   const f=this.capeRestFactors[2*i],weight=f*f;
+   const f=this.capeRestFactors[2*i],weight=f*f,j=i*9;
    target.fromBufferAttribute(attribute,i).applyMatrix4(matrix);
    if(carrying){
     const u=clothUV.getX(i)*2-1,v=1-clothUV.getY(i);
@@ -1118,16 +1134,17 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
     seam.set(this.capeRestFactors[2*i+1],height*.5,.06).applyMatrix4(matrix);
     if(f>=5/6)hangStep.copy(hang);
     else if(hangAxisScale){
-     const theta=hangAngle*(.25+f*.9),k=Math.sin(theta)*hangAxisScale;
-     hangStep.set(hang.x*k,hang.y*k,hang.z*k,Math.cos(theta));
+     // A cloth row shares one rest factor and therefore one hang rotation.
+     if(f!==hangF){const theta=hangAngle*(.25+f*.9);hangF=f;hangK=Math.sin(theta)*hangAxisScale;hangW=Math.cos(theta);}
+     hangStep.set(hang.x*hangK,hang.y*hangK,hang.z*hangK,hangW);
     }else hangStep.copy(still).slerp(hang,.25+f*.9);
     target.sub(seam).applyQuaternion(hangStep).add(seam);
     // Slow heavy sway travelling down the folds.
-    target.addScaledVector(trail,weight*(.10*Math.sin(t*1.7+this.capeBase[i*3]*1.9-f*3.1)+.05*Math.sin(t*2.9+this.capeBase[i*3]*4.3)));
+    target.addScaledVector(trail,weight*(.10*(sway1s*phases[j+1]+sway1c*phases[j])+.05*(sway2s*phases[j+3]+sway2c*phases[j+2])));
    }
-   target.addScaledVector(flare,weight*(.82+.18*Math.sin(this.capeBase[i*3]*2.3+t*2)));
+   target.addScaledVector(flare,weight*(.82+.18*(phases[j+4]*flareC+phases[j+5]*flareS)));
    if(loft>0){
-    const belly=Math.sin(f*Math.PI*.9),ripple=.82+.18*Math.sin(this.capeBase[i*3]*1.7+t*3.1+f*2.4);
+    const belly=phases[j+8],ripple=.82+.18*(phases[j+6]*rippleC+phases[j+7]*rippleS);
     target.y+=loft*(3.9*weight+1.7*belly)*ripple*(firstRake?.42:1)*(1-.96*kneel);
     target.addScaledVector(trail,loft*(.7*weight+.5*belly));
    }
@@ -1855,8 +1872,16 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
    const softTakeoff=this.name==='gilded_warlord'&&state.bossAction==='promised';
    if(motion==='dive'||(this.name==='gilded_warlord'&&state.pos.y>.1&&!((softTakeoff||state.groundedRush&&state.bossAction==='leap')&&state.pos.y<.7)))return;
    this.root.updateMatrixWorld(true);let footY=Infinity;
-   for(const [name,bone] of this.poseJoints)if(/Foot$/i.test(name))footY=Math.min(footY,bone.getWorldPosition(new T.Vector3()).y);
+   // The whole rig was just updated; read each foot's world height directly.
+   for(const bone of this.footJoints())footY=Math.min(footY,bone.matrixWorld.elements[13]);
    if(Number.isFinite(footY)){const weight=softTakeoff||state.groundedRush&&state.bossAction==='leap'?1-T.MathUtils.smoothstep(state.pos.y,0,.7):1;this.visual.position.y-=(footY-state.pos.y-(state.jump||0)-(state.groundOffset||0)-(this.footClearance??.08))*weight;this.root.updateMatrixWorld(true);}
+ }
+ footJoints(){
+  if(this.footJointSource!==this.poseJoints){
+   this.footJointSource=this.poseJoints;
+   this.footJointList=[];for(const [name,bone] of this.poseJoints)if(/Foot$/i.test(name))this.footJointList.push(bone);
+  }
+  return this.footJointList;
  }
  improveTextureSampling(maximum,attachments=[]){
   for(const object of [this.root,this.helmet?.shell,this.cape,...this.weapons.map(w=>w.pivot),...attachments])object?.traverse(mesh=>{
@@ -2250,17 +2275,23 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
  }
  closeWeaponHands(){
   if(this.name!=='gilded_warlord'||!this.thrustBasePose)return;
-  for(const pose of this.thrustBasePose){
-   const match=/(Left|Right)Hand(Index|Middle|Ring|Pinky|Thumb)([123])$/.exec(pose.bone.name);
-   if(!match)continue;
-   const side=match[1],finger=match[2],joint=Number(match[3]);
-   const sign=side==='Right'?1:-1;
-   // The imported idle pose already curls the fingers. Add only the final
-   // closure around the handle; another full fist fold inverts the phalanges.
-   const curl=(finger==='Thumb'?[.16,.24,.18]:[.45,.55,.30])[joint-1];
+  // The grip closure of each finger joint is fixed. Resolve it once per pose set.
+  if(this.weaponGripSource!==this.thrustBasePose){
+   this.weaponGripSource=this.thrustBasePose;this.weaponGrip=[];
+   for(const pose of this.thrustBasePose){
+    const match=/(Left|Right)Hand(Index|Middle|Ring|Pinky|Thumb)([123])$/.exec(pose.bone.name);
+    if(!match)continue;
+    const side=match[1],finger=match[2],joint=Number(match[3]);
+    // The imported idle pose already curls the fingers. Add only the final
+    // closure around the handle; another full fist fold inverts the phalanges.
+    const curl=(finger==='Thumb'?[.16,.24,.18]:[.45,.55,.30])[joint-1];
+    const axis=side==='Right'?new T.Vector3(0,0,1):new T.Vector3(-1,0,0);
+    this.weaponGrip.push({pose,closure:new T.Quaternion().setFromAxisAngle(axis,curl)});
+   }
+  }
+  for(const {pose,closure} of this.weaponGrip){
    const bone=pose.bone;this.combatAdjustments.push({bone,rotation:bone.quaternion.clone()});
-   const axis=side==='Right'?new T.Vector3(0,0,1):new T.Vector3(-1,0,0);
-   bone.quaternion.copy(pose.q).multiply(new T.Quaternion().setFromAxisAngle(axis,curl));
+   bone.quaternion.copy(pose.q).multiply(closure);
   }
   this.root.updateMatrixWorld(true);
  }
@@ -2468,7 +2499,7 @@ for(const a of [...(this.combatAdjustments||[])].reverse())a.bone.quaternion.cop
   }
   // Keep the planted feet at the terrain while the knees and torso fold.
   let min=Infinity;
-  for(const [name,bone] of this.poseJoints)if(/Foot$/i.test(name))min=Math.min(min,bone.getWorldPosition(new T.Vector3()).y);
+  for(const bone of this.footJoints())min=Math.min(min,bone.getWorldPosition(footPoint).y);
   if(Number.isFinite(min))this.visual.position.y-=min-state.pos.y-(state.groundOffset||0)-this.footClearance;
  }
  this.flameCastPose(state);if((state.parry&&this.name!=='ivory_duelist')||state.guard||state.grab){const grabBlend=this.name==='gilded_warlord'&&state.bossAction==='stompGrab'?T.MathUtils.smoothstep(state.bossElapsed,1.8,1.96):1;for(const side of state.grab?['Left','Right']:['Left']){const arm=findRigBone(this.bones,side+'Arm');const fore=findRigBone(this.bones,side+'ForeArm');if(arm){this.combatAdjustments.push({bone:arm,rotation:arm.quaternion.clone()});arm.rotateX(-.9*grabBlend);arm.rotateZ((side==='Left'?-.7:.7)*grabBlend);}if(fore){this.combatAdjustments.push({bone:fore,rotation:fore.quaternion.clone()});fore.rotateX(-.65*grabBlend);}}}this.pairedReadyPose(state);this.grabAnticipation(state);this.postGrabRecovery(state);this.postGrabStep(state);this.ringLandingPose(state);this.sourceCrossPose(state);this.sourceLongPose(state);this.sourceMeleePose(state);this.sourceRockRipPose(state);this.phaseKneelPose(state);this.playerGesture(dt,state);this.normalJump(state);}
@@ -2718,11 +2749,18 @@ export class Effects{
      }
    }
    const sleeves=[];let spine;
-   const pulseTime={value:0},variation=.5+.5*Math.sin(pos.x*1.19+pos.z*.71);
+   // Pillar materials are identical apart from opacity and their own pulse
+   // clock. Reuse a retired set so a burst does not derive six new programs.
+   const kit=(this.pillarKits??=[]).pop()??{sleeves:[]};
+   const pulseTime=kit.pulseTime??={value:0},variation=.5+.5*Math.sin(pos.x*1.19+pos.z*.71);
+   pulseTime.value=0;
    const secondary=options.gain!==undefined;
    const heightFactor=from?1:secondary?.46+.55*variation:.74+.44*variation;
-   for(const [width,opacity,color,height] of [[.060,1,0xfff6d6,40],[.25,.34,0xffce68,40],[.85,.075,0xffad52,38]]){
-     const material=new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
+   for(const [layer,[width,opacity,color,height]] of [[.060,1,0xfff6d6,40],[.25,.34,0xffce68,40],[.85,.075,0xffad52,38]].entries()){
+     let material=kit.sleeves[layer];
+     if(material)material.opacity=0;
+     else{
+     material=kit.sleeves[layer]=new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
      material.color.multiplyScalar(width<.85?1.24:1.62);
      // Main102-104 s: thin bright spines with soft gold fringes. The old
      // solid cylinder silhouette produced hard rectangular panels near camera.
@@ -2741,6 +2779,7 @@ export class Effects{
          #include <opaque_fragment>`);
      };
      material.customProgramCacheKey=()=> 'wind-cut-holy-pillar';
+     }
      const breadth=width>.1?.94+.88*variation:1;
      const shaftHeight=height*heightFactor;
      const profile=[[0,1.65],[.025,1.22],[.09,.71],[.28,.60],[.57,.73],[.84,.53],[1,.28]];
@@ -2756,11 +2795,13 @@ export class Effects{
      o.userData.restOpacity=opacity;
      if(width>.1)sleeves.push(o);else spine=o;
    }
-   const glow=new T.Sprite(new T.SpriteMaterial({map:this.cloudTexture,color:0xffd591,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false}));glow.position.y=.28;glow.scale.set(3.0,1.4,1);glow.userData.opacityScale=.42;group.add(glow);
+   if(kit.glow)kit.glow.opacity=0;
+   const glow=new T.Sprite(kit.glow??=new T.SpriteMaterial({map:this.cloudTexture,color:0xffd591,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false}));glow.position.y=.28;glow.scale.set(3.0,1.4,1);glow.userData.opacityScale=.42;group.add(glow);
    let filaments=null;
    if(!from){
      const count=pairedLanding?4:2,unit=new T.Object3D();
-     const material=new T.MeshBasicMaterial({color:0xffdf99,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
+     if(kit.filament)kit.filament.opacity=0;
+     const material=kit.filament??=new T.MeshBasicMaterial({color:0xffdf99,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
      filaments=new T.InstancedMesh(new T.CylinderGeometry(.009,.018,1,5),material,count);
      for(let i=0;i<count;i++){
        const a=i*2.39996+pos.x*.67-pos.z*.28,r=.16+.32*(i+1)/count,h=16+(i*11%17);
@@ -2769,7 +2810,14 @@ export class Effects{
      }
      filaments.computeBoundingSphere();group.add(filaments);
    }
-   const particles=createColumnParticles(pos.x*.37+pos.z*.71,duration,width>=2.5);
+   const particles=createColumnParticles(pos.x*.37+pos.z*.71,duration,width>=2.5,kit.particles);
+   kit.particles=particles.material;
+   // Retire the geometry; keep the materials and their compiled programs.
+   group.userData.releaseGhost=()=>{
+     group.traverse(o=>{o.geometry?.dispose();if(o.isInstancedMesh)o.dispose();});
+     if(this.pillarKits.length<64)this.pillarKits.push(kit);
+     else for(const material of [...kit.sleeves,kit.glow,kit.filament,kit.particles])material?.dispose();
+   };
    const particleGain=secondary?options.gain*(.38+.38*variation):1;
    particles.material.uniforms.opacity.value=particleGain;
    group.add(particles);

@@ -129,7 +129,10 @@ def main(source, out):
         '<script type="importmap">{"imports":{"game/":"./"}}</script></head>',
         1,
     )
-    shell = shell.replace("<head>", "<head><!-- Unpacked from %s by games/unpack.py -->" % page_name, 1)
+    origin = os.path.basename(source)
+    if origin != page_name:
+        origin = "%s (%s)" % (origin, page_name)
+    shell = shell.replace("<head>", "<head><!-- Unpacked from %s by games/unpack.py -->" % origin, 1)
     with open(os.path.join(root, "index.html"), "w", encoding="utf-8", newline="\n") as handle:
         handle.write(shell)
 

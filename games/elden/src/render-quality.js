@@ -184,3 +184,97 @@ export function cacheSceneTransforms(scene, objectPrototype){
   o.updateMatrix=updateLocal;
  });
 }
+
+// Three's shadow pass shares one depth material for every plain caster. Its
+// program state follows the last object drawn, so alternating instanced,
+// skinned and morphing casters re-derived the program on each switch. Give
+// each caster family an equivalent depth material of its own. Three still
+// copies side, maps and alpha settings onto it for every draw.
+export function partitionShadowDepth(scene,DepthMaterial){
+ const families=new Map();
+ const variant=m=>!m||m.clipShadows&&m.clippingPlanes?.length||m.displacementMap&&m.displacementScale!==0||
+  m.alphaMap&&m.alphaTest>0||m.map&&m.alphaTest>0||m.alphaToCoverage;
+ scene.traverse(o=>{
+  if(!o.isMesh||!o.castShadow||o.customDepthMaterial)return;
+  const materials=Array.isArray(o.material)?o.material:[o.material];
+  if(materials.some(variant))return;
+  const morph=o.geometry?.morphAttributes||{};
+  const key=[o.isInstancedMesh?1:0,o.isInstancedMesh&&o.instanceColor?1:0,o.isInstancedMesh&&o.morphTexture?1:0,
+   o.isSkinnedMesh?1:0,o.isBatchedMesh?1:0,morph.position?.length||0,morph.normal?.length||0,morph.color?.length||0,
+   materials.some(m=>m.alphaTest>0)?1:0].join('');
+  if(key==='000000000')return;
+  let material=families.get(key);
+  if(!material)families.set(key,material=new DepthMaterial());
+  o.customDepthMaterial=material;
+ });
+ return families.size;
+}
+
+// One material drawn both as fixed instanced props and as ordinary meshes
+// alternates between two shader variants on every frame. The instanced props
+// use a view of the same material: every property, hook and uniform is read
+// from the original, while Three keeps a separate program state for it.
+export function separateInstancedPrograms(scene){
+ const plain=new Set(),instanced=[];
+ scene.traverse(o=>{
+  if(!o.isMesh||Array.isArray(o.material))return;
+  if(o.isInstancedMesh&&!o.matrixAutoUpdate)instanced.push(o);
+  else if(!o.isInstancedMesh&&!o.isSkinnedMesh)plain.add(o.material);
+ });
+ const views=new Map();
+ for(const mesh of instanced){
+  const material=mesh.material;
+  // Three writes side and version on two-sided transparent materials.
+  if(!plain.has(material)||material.transparent)continue;
+  let view=views.get(material);
+  if(!view)views.set(material,view=Object.create(material));
+  mesh.material=view;
+ }
+ return views.size;
+}
+
+// Three draws a two-sided transparent material as a back pass then a front
+// pass, rewriting its side and version each time, so its program is derived
+// twice per frame. Additive light that writes no depth sums the same faces in
+// either order. Material.onBeforeRender runs before that check.
+export function singlePassAdditive(T){
+ const base=T.Material.prototype.onBeforeRender;
+ T.Material.prototype.onBeforeRender=function(...args){
+  if(this.transparent&&this.side===T.DoubleSide&&!this.forceSinglePass&&this.blending===T.AdditiveBlending&&!this.depthWrite)
+   this.forceSinglePass=true;
+  return base.apply(this,args);
+ };
+}
+
+// Large merged arena sections are selected per camera, and Three creates a
+// buffer on the first draw that uses it. The first turn toward an unseen part
+// of the arena then uploaded tens of megabytes inside one frame. While the
+// loading screen is up, submit every geometry once with an empty draw range:
+// its vertex, index and instance buffers are created, and nothing is drawn.
+export function uploadSceneGeometry(T,renderer,scene){
+ const seen=new Map(),proxies=new T.Scene();
+ const material=new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,depthTest:false});
+ scene.traverse(o=>{
+  const geometry=o.geometry;
+  if(!geometry?.isBufferGeometry||!geometry.attributes.position)return;
+  if(!seen.has(geometry))seen.set(geometry,[geometry.drawRange.start,geometry.drawRange.count]);
+  else if(!o.isInstancedMesh)return;
+  let proxy;
+  if(o.isInstancedMesh){
+   proxy=new T.InstancedMesh(geometry,material,o.count);
+   proxy.instanceMatrix=o.instanceMatrix;proxy.instanceColor=o.instanceColor;
+  }else proxy=new T.Mesh(geometry,material);
+  proxy.frustumCulled=false;proxies.add(proxy);
+ });
+ const target=new T.WebGLRenderTarget(1,1,{depthBuffer:false}),previous=renderer.getRenderTarget();
+ const camera=new T.PerspectiveCamera();
+ for(const geometry of seen.keys())geometry.setDrawRange(0,0);
+ try{
+  renderer.setRenderTarget(target);renderer.render(proxies,camera);
+ }finally{
+  for(const [geometry,[start,count]] of seen)geometry.setDrawRange(start,count);
+  renderer.setRenderTarget(previous);
+  proxies.clear();target.dispose();material.dispose();
+ }
+ return seen.size;
+}
