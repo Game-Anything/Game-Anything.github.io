@@ -677,6 +677,7 @@
   startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
   startReel($("#elden"), [{ src: "media/elden/demo.mp4" }]);
   startReel($("#gta"), [{ src: "media/gta/demo.mp4" }]);
+  startReel($("#odyssey"), [{ src: "media/odyssey/demo.mp4" }]);
 
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
   const passes = (verdicts) => verdicts.filter((verdict) => verdict.v === "pass").length;
