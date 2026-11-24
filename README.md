@@ -1,6 +1,6 @@
-# Game-Anything
+# RecreateAAA
 
-Anything in. Playable game out.
+Coding agents that rebuild games from video.
 
 The source of the homepage: https://game-anything.github.io/
 
