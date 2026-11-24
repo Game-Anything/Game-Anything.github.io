@@ -14,10 +14,9 @@ window.SITE_ZH = {
   "The recreation of the same screen at the same input time": "同一画面的复刻版，同一输入时刻",
   "The original Street Fighter 6, Ryu throwing a Hadoken at Ken": "原版街头霸王 6，隆向肯发出波动拳",
   "The recreation at the same input time, throwing the same Hadoken": "复刻版，同一输入时刻发出同样的波动拳",
-  "The original Sekiro: a band of flame sweeping across the rooftop": "原版只狼：一道火焰扫过屋顶",
-  "The recreation: a band of flame sweeping across the rooftop": "复刻版：一道火焰扫过屋顶",
-  "The original Plants vs. Zombies: the full pool board with the huge wave warning": "原版植物大战僵尸：泳池关卡，屏幕上是一大波僵尸的提示",
-  "The recreation: the full pool board with the huge wave warning": "复刻版：泳池关卡，屏幕上是一大波僵尸的提示",
+  "The original Elden Ring: Radahn swinging his sword over the player": "原版艾尔登法环：拉塔恩挥剑压向玩家",
+  "A shooter behind a car, aiming at a police truck": "枪手躲在车后，瞄准一辆警用皮卡",
+  "The recreation at the same moment": "复刻版，同一时刻",
   "The shooter a coding agent rebuilt, during a match": "编程 Agent 重建的射击游戏，对局中",
 
   "pipe-label": "工作流程",

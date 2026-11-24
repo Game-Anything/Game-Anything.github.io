@@ -145,6 +145,19 @@
 
   /* The select screen: one source video drawn onto two equal screens, so they can never drift apart. */
   const GAMES = {
+    /* Clips without recorded keys: the stage plays them with a seek bar and no key strip. */
+    elden: {
+      input: "VIDEO", deck: "REBUILT FROM VIDEO",
+      clip: () => ({ src: "media/elden/demo.mp4" }),
+      stills: ["media/figures/hero-elden-original.webp", "media/figures/hero-elden-recreation.webp"],
+      alt: ["The original Elden Ring: Radahn swinging his sword over the player", "The recreation at the same moment"],
+    },
+    gta: {
+      input: "VIDEO", deck: "REBUILT FROM VIDEO",
+      clip: () => ({ src: "media/gta/demo.mp4" }),
+      stills: ["media/figures/hero-gta-original.webp", "media/figures/hero-gta-recreation.webp"],
+      alt: ["A shooter behind a car, aiming at a police truck", "The recreation at the same moment"],
+    },
     celeste: {
       input: "VIDEO",
       clip: () => celesteClip("ckpt0-wavedash"),
@@ -156,16 +169,6 @@
       clip: () => sf6Clip("04"),
       stills: ["media/figures/hero-sf6-original.webp", "media/figures/hero-sf6-recreation.webp"],
       alt: ["The original Street Fighter 6, Ryu throwing a Hadoken at Ken", "The recreation at the same input time, throwing the same Hadoken"],
-    },
-    sekiro: {
-      input: "VIDEO", deck: "REBUILT FROM VIDEO",
-      stills: ["media/figures/sekiro-fire-original.webp", "media/figures/sekiro-fire-recreation.webp"],
-      alt: ["The original Sekiro: a band of flame sweeping across the rooftop", "The recreation: a band of flame sweeping across the rooftop"],
-    },
-    pvz: {
-      input: "VIDEO", deck: "REBUILT FROM VIDEO",
-      stills: ["media/figures/pvz-wave-original.webp", "media/figures/pvz-wave-recreation.webp"],
-      alt: ["The original Plants vs. Zombies: the full pool board with the huge wave warning", "The recreation: the full pool board with the huge wave warning"],
     },
     repo: {
       input: "REPO", deck: "720-BYTE BRIEF, 46 MINUTES",
@@ -205,6 +208,12 @@
         this.draw();
         if (this.wantsPlay && this.visible) this.video.play().catch(() => this.showState());
       });
+      this.video.addEventListener("loadedmetadata", () => {
+        if (!this.clip || this.clip.duration) return;
+        this.clip.duration = this.video.duration;
+        this.seekInput.max = String(this.clip.duration);
+        this.sync();
+      });
       this.video.addEventListener("seeked", () => { this.draw(); this.sync(); });
       this.video.addEventListener("timeupdate", () => this.sync());
       this.seekInput.addEventListener("input", () => {
@@ -223,7 +232,7 @@
 
     label() {
       const game = GAMES[this.game];
-      this.deckLabel.textContent = tr(this.clip ? "SAME KEYS" : game.deck);
+      this.deckLabel.textContent = tr(game.deck || "SAME KEYS");
       this.stills.forEach((still, index) => {
         if (game.stills[index]) still.alt = tr(game.alt[index]);
       });
@@ -244,9 +253,12 @@
       });
       this.contexts.forEach((context, index) => context.clearRect(0, 0, this.canvases[index].width, this.canvases[index].height));
       const live = Boolean(this.clip);
-      for (const node of [...this.canvases, this.playButton, this.seekInput, this.tokensBox]) node.hidden = !live;
+      for (const node of [...this.canvases, this.playButton, this.seekInput]) node.hidden = !live;
+      this.tokensBox.hidden = !this.clip?.lanes;
       if (live) {
-        this.seekInput.max = String(this.clip.duration);
+        this.seekInput.max = String(this.clip.duration || 0);
+        this.seekInput.value = "0";
+        this.seekInput.style.setProperty("--pct", "0%");
         this.renderTokens(this.clip);
         this.video.src = this.clip.src;
         this.video.load();
@@ -265,7 +277,7 @@
     }
 
     renderTokens(clip) {
-      this.tokens = inputTokens(clip.lanes);
+      this.tokens = clip.lanes ? inputTokens(clip.lanes) : [];
       this.current = -1;
       const nodes = [];
       let previous = -Infinity;
@@ -304,7 +316,7 @@
     }
 
     sync() {
-      if (!this.clip) return;
+      if (!this.clip?.duration) return;
       const t = Math.min(this.video.currentTime || 0, this.clip.duration);
       this.seekInput.value = String(t);
       this.seekInput.style.setProperty("--pct", `${(t / this.clip.duration) * 100}%`);
@@ -379,7 +391,7 @@
       next.focus();
     });
   });
-  stage.select("celeste", { slam: false });
+  stage.select("elden", { slam: false });
 
   /* The wordmark joins the nav once the title has scrolled away. */
   new IntersectionObserver(([entry]) => $(".nav .brand").classList.toggle("is-named", !entry.isIntersecting),
