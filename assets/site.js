@@ -1,7 +1,6 @@
 (() => {
   const DATA = window.SITE_DATA;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const phoneLayout = () => matchMedia("(max-width: 820px)").matches;
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -25,10 +24,15 @@
     svg.append(use);
     return svg;
   };
+  /* The eval player reads tenths; the hero's clock reads whole seconds. */
   const clock = (t) => {
     const whole = Math.max(0, t);
     const minutes = Math.floor(whole / 60);
     return `${minutes}:${(whole - minutes * 60).toFixed(1).padStart(4, "0")}`;
+  };
+  const shortClock = (t) => {
+    const whole = Math.max(0, Math.floor(t || 0));
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
   };
   const setPressed = (buttons, active) => {
     for (const button of buttons) button.setAttribute("aria-pressed", String(button === active));
@@ -39,7 +43,6 @@
   /* Language: English lives in index.html and in the strings below, and zh.js maps them to Chinese. */
   const ZH = window.SITE_ZH;
   const LANG_KEY = "game-anything-lang";
-  const ZH_FONT = "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700;900&display=swap";
   let lang = "en";
   try {
     if (localStorage.getItem(LANG_KEY) === "zh") lang = "zh";
@@ -64,7 +67,6 @@
   const langButton = $("#lang-toggle");
   const showLanguage = () => {
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    if (lang === "zh" && !$("#zh-font")) document.head.append(el("link", { id: "zh-font", rel: "stylesheet", href: ZH_FONT }));
     langButton.textContent = lang === "zh" ? "EN" : "中文";
     langButton.lang = lang === "zh" ? "en" : "zh-CN";
     langButton.setAttribute("aria-label", lang === "zh" ? "Switch to English" : "切换到中文");
@@ -101,118 +103,62 @@
     });
   }
 
-  /* Turn the recorded key presses into the notation a player would read: 8-way directions and buttons. */
-  const DIRECTION_ROTATION = {
-    "0,-1": 0, "1,-1": 45, "1,0": 90, "1,1": 135, "0,1": 180, "-1,1": 225, "-1,0": 270, "-1,-1": 315,
-  };
-  const DIRECTION_VECTOR = { "←": [-1, 0], "→": [1, 0], "↓": [0, 1], "↑": [0, -1] };
-  function inputTokens(lanes) {
-    const events = [];
-    for (const lane of lanes) {
-      if (lane.tone === "dir") {
-        const vector = DIRECTION_VECTOR[lane.role || lane.cap];
-        for (const [a, b] of lane.bars) {
-          events.push({ t: a, order: 1, vector, delta: 1 });
-          events.push({ t: b, order: 0, vector, delta: -1 });
-        }
-      } else {
-        const label = lane.tone === "m" ? lane.cap : (lane.role || lane.cap).toUpperCase();
-        for (const [a] of lane.bars) events.push({ t: a, order: 2, label });
-      }
-    }
-    events.sort((x, y) => x.t - y.t || x.order - y.order);
-    const tokens = [];
-    let x = 0;
-    let y = 0;
-    let lastDirection = null;
-    for (const event of events) {
-      if (event.label) {
-        tokens.push({ t: event.t, label: event.label });
-        continue;
-      }
-      x += event.vector[0] * event.delta;
-      y += event.vector[1] * event.delta;
-      const key = `${Math.sign(x)},${Math.sign(y)}`;
-      if (key === "0,0") {
-        lastDirection = null;
-      } else if (key !== lastDirection) {
-        tokens.push({ t: event.t, rotation: DIRECTION_ROTATION[key] });
-        lastDirection = key;
-      }
-    }
-    return tokens;
-  }
-
-  /* The select screen: one source video drawn onto two equal screens, so they can never drift apart. */
-  const GAMES = {
-    /* Clips without recorded keys: the stage plays them with a seek bar and no key strip. */
+  /* The hero: one side-by-side clip drawn onto two frames, so original and recreation can never drift apart. */
+  const HERO = {
     elden: {
-      input: "VIDEO", deck: "REBUILT FROM VIDEO",
-      clip: () => ({ src: "media/elden/demo.mp4" }),
+      src: "media/elden/demo.mp4", start: 4, link: "games/elden/",
       stills: ["media/figures/hero-elden-original.webp", "media/figures/hero-elden-recreation.webp"],
-      alt: ["The original Elden Ring: Radahn swinging his sword over the player", "The recreation at the same moment"],
+      alt: [["The original Elden Ring: Radahn above the arena among floating purple rocks", "alt-elden-a"], ["The recreation at the same moment", "alt-elden-b"]],
     },
     gta: {
-      input: "VIDEO", deck: "REBUILT FROM VIDEO",
-      clip: () => ({ src: "media/gta/demo.mp4" }),
+      src: "media/gta/demo.mp4",
       stills: ["media/figures/hero-gta-original.webp", "media/figures/hero-gta-recreation.webp"],
-      alt: ["A shooter behind a car, aiming at a police truck", "The recreation at the same moment"],
+      alt: [["A shooter behind a car, aiming at a police truck"], ["The recreation at the same moment"]],
     },
     celeste: {
-      input: "VIDEO",
-      clip: () => celesteClip("ckpt0-wavedash"),
+      src: celesteClip("ckpt0-wavedash").src,
       stills: ["media/figures/hero-celeste-original.webp", "media/figures/hero-celeste-recreation.webp"],
-      alt: ["The original Celeste, Madeline at the start of Chapter 1", "The recreation of the same screen at the same input time"],
+      alt: [["The original Celeste, Madeline at the start of Chapter 1"], ["The recreation of the same screen at the same input time"]],
     },
     sf6: {
-      input: "VIDEO",
-      clip: () => sf6Clip("04"),
+      src: sf6Clip("04").src,
       stills: ["media/figures/hero-sf6-original.webp", "media/figures/hero-sf6-recreation.webp"],
-      alt: ["The original Street Fighter 6, Ryu throwing a Hadoken at Ken", "The recreation at the same input time, throwing the same Hadoken"],
-    },
-    repo: {
-      input: "REPO", deck: "720-BYTE BRIEF, 46 MINUTES",
-      stills: [null, "media/figures/repo-rebuild.webp"],
-      alt: [null, "The shooter a coding agent rebuilt, during a match"],
+      alt: [["The original Street Fighter 6, Ryu throwing a Hadoken at Ken"], ["The recreation at the same input time, throwing the same Hadoken"]],
     },
   };
 
-  class VersusStage {
+  class HeroPlayer {
     constructor() {
-      this.stage = $("#top");
-      this.screens = [$("#screen-a"), $("#screen-b")];
-      this.stills = this.screens.map((screen) => $(".screen__still", screen));
-      this.canvases = this.screens.map((screen) => $("canvas", screen));
+      this.root = $(".hero");
+      this.frames = [...document.querySelectorAll("#hero-compare .frame")];
+      this.stills = this.frames.map((frame) => $(".frame__still", frame));
+      this.canvases = this.frames.map((frame) => $("canvas", frame));
       this.contexts = this.canvases.map((canvas) => canvas.getContext("2d"));
-      this.tokensBox = $("#hero-tokens");
-      this.strip = $(".tokens__strip", this.tokensBox);
       this.playButton = $("#hero-play");
+      this.clockNode = $("#hero-clock");
       this.seekInput = $("#hero-seek");
-      this.deckLabel = $("#deck-label");
-      this.tagInput = $("#tag-input");
-      this.repoCard = $("#screen-repo");
-      this.pipeVideo = $("#pipe-video");
-      this.pipeRepo = $("#pipe-repo");
-      this.video = el("video", { muted: "", playsinline: "", loop: "", preload: "auto", class: "stage__source", "aria-hidden": "true", tabindex: "-1" });
+      this.link = $("#hero-link");
+      this.buttons = [...document.querySelectorAll(".switch button[data-game]")];
+      this.video = el("video", { muted: "", playsinline: "", loop: "", preload: "auto", class: "media-source", "aria-hidden": "true", tabindex: "-1" });
       this.video.muted = true;
-      this.stage.append(this.video);
-      this.visible = true;
+      this.root.append(this.video);
       this.wantsPlay = !reducedMotion;
-      this.tokens = [];
-      this.current = -1;
+      this.visible = true;
+      this.pendingStart = null;
 
       this.playButton.addEventListener("click", () => (this.video.paused ? this.play() : this.pause()));
       this.video.addEventListener("play", () => { this.showState(); this.loop(); });
       this.video.addEventListener("pause", () => this.showState());
+      this.video.addEventListener("loadedmetadata", () => {
+        if (this.pendingStart !== null) {
+          this.video.currentTime = this.pendingStart;
+          this.pendingStart = null;
+        }
+        this.sync();
+      });
       this.video.addEventListener("loadeddata", () => {
         this.draw();
         if (this.wantsPlay && this.visible) this.video.play().catch(() => this.showState());
-      });
-      this.video.addEventListener("loadedmetadata", () => {
-        if (!this.clip || this.clip.duration) return;
-        this.clip.duration = this.video.duration;
-        this.seekInput.max = String(this.clip.duration);
-        this.sync();
       });
       this.video.addEventListener("seeked", () => { this.draw(); this.sync(); });
       this.video.addEventListener("timeupdate", () => this.sync());
@@ -220,121 +166,57 @@
         this.video.currentTime = Number(this.seekInput.value);
         this.sync();
       });
+      for (const button of this.buttons) button.addEventListener("click", () => this.select(button.dataset.game));
       new IntersectionObserver(([entry]) => {
         this.visible = entry.isIntersecting;
-        if (!this.clip) return;
         if (this.visible && this.wantsPlay) this.video.play().catch(() => {});
         else if (!this.visible && !this.video.paused) this.video.pause();
-      }, { threshold: 0.15 }).observe(this.stage);
-      addEventListener("resize", () => this.measureTokens());
+      }, { threshold: 0.2 }).observe($("#hero-compare"));
       onLanguage.push(() => this.label());
     }
 
-    label() {
-      const game = GAMES[this.game];
-      this.deckLabel.textContent = tr(game.deck || "SAME KEYS");
-      this.stills.forEach((still, index) => {
-        if (game.stills[index]) still.alt = tr(game.alt[index]);
-      });
-      this.showState();
-    }
-
-    select(id, { slam = true } = {}) {
-      const game = GAMES[id];
-      this.game = id;
-      this.clip = game.clip ? game.clip() : null;
-      this.tagInput.textContent = game.input;
-      this.repoCard.hidden = game.input !== "REPO";
-      this.pipeVideo.hidden = game.input === "REPO";
-      this.pipeRepo.hidden = game.input !== "REPO";
-      this.stills.forEach((still, index) => {
-        still.hidden = !game.stills[index];
-        if (game.stills[index]) still.src = game.stills[index];
-      });
-      this.contexts.forEach((context, index) => context.clearRect(0, 0, this.canvases[index].width, this.canvases[index].height));
-      const live = Boolean(this.clip);
-      for (const node of [...this.canvases, this.playButton, this.seekInput]) node.hidden = !live;
-      this.tokensBox.hidden = !this.clip?.lanes;
-      if (live) {
-        this.seekInput.max = String(this.clip.duration || 0);
-        this.seekInput.value = "0";
-        this.seekInput.style.setProperty("--pct", "0%");
-        this.renderTokens(this.clip);
-        this.video.src = this.clip.src;
-        this.video.load();
-        this.sync();
-      } else {
-        this.video.pause();
-        this.video.removeAttribute("src");
-        this.video.load();
-      }
+    select(id) {
+      const game = HERO[id];
+      this.id = id;
+      setPressed(this.buttons, this.buttons.find((button) => button.dataset.game === id));
+      this.stills.forEach((still, index) => { still.src = game.stills[index]; });
+      this.canvases.forEach((canvas) => canvas.classList.remove("is-live"));
+      this.link.hidden = !game.link;
+      if (game.link) this.link.href = game.link;
+      this.pendingStart = game.start || null;
+      this.seekInput.value = String(game.start || 0);
+      this.seekInput.style.setProperty("--pct", "0%");
+      this.video.src = game.src;
+      this.video.load();
       this.label();
-      if (slam && !reducedMotion) {
-        this.stage.classList.remove("is-slam");
-        void this.stage.offsetWidth;
-        this.stage.classList.add("is-slam");
-      }
     }
 
-    renderTokens(clip) {
-      this.tokens = clip.lanes ? inputTokens(clip.lanes) : [];
-      this.current = -1;
-      const nodes = [];
-      let previous = -Infinity;
-      for (const token of this.tokens) {
-        if (token.t - previous > 0.35 && nodes.length) nodes.push(el("span", { class: "tok--gap" }));
-        previous = token.t;
-        const node = el("span", { class: "tok" });
-        if (token.label) node.textContent = token.label;
-        else {
-          const arrow = icon("arrow");
-          arrow.style.rotate = `${token.rotation}deg`;
-          node.append(arrow);
-        }
-        token.node = node;
-        nodes.push(node);
-      }
-      this.strip.replaceChildren(...nodes);
-      this.strip.style.transform = "translateX(0)";
-      this.measureTokens();
-    }
-
-    measureTokens() {
-      for (const token of this.tokens) token.left = token.node.offsetLeft;
-      this.current = -1;
+    label() {
+      const game = HERO[this.id];
+      this.stills.forEach((still, index) => { still.alt = tr(...game.alt[index]); });
+      this.showState();
     }
 
     draw() {
       const { video } = this;
-      if (!this.clip || video.readyState < 2 || !video.videoWidth) return;
+      if (video.readyState < 2 || !video.videoWidth) return;
       const width = video.videoWidth / 2;
       const height = video.videoHeight;
-      this.canvases.forEach((canvas, index) => {
-        if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-        this.contexts[index].drawImage(video, index * width, 0, width, height, 0, 0, width, height);
+      this.canvases.forEach((canvas, side) => {
+        if (canvas.width !== Math.round(width) || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+        this.contexts[side].drawImage(video, side * width, 0, width, height, 0, 0, width, height);
+        canvas.classList.add("is-live");
       });
     }
 
     sync() {
-      if (!this.clip?.duration) return;
-      const t = Math.min(this.video.currentTime || 0, this.clip.duration);
+      const duration = this.video.duration;
+      if (!duration) return;
+      const t = Math.min(this.video.currentTime || 0, duration);
+      this.seekInput.max = String(duration);
       this.seekInput.value = String(t);
-      this.seekInput.style.setProperty("--pct", `${(t / this.clip.duration) * 100}%`);
-      let index = -1;
-      for (let low = 0, high = this.tokens.length - 1; low <= high;) {
-        const middle = (low + high) >> 1;
-        if (this.tokens[middle].t <= t) { index = middle; low = middle + 1; } else high = middle - 1;
-      }
-      if (index !== this.current) {
-        this.tokens[this.current]?.node.classList.remove("tok--on");
-        const token = this.tokens[index];
-        token?.node.classList.add("tok--on");
-        const room = this.tokensBox.clientWidth;
-        const left = token ? token.left : 0;
-        const maximum = Math.max(0, this.strip.scrollWidth - room);
-        this.strip.style.transform = `translateX(${-Math.min(maximum, Math.max(0, left - room * 0.3))}px)`;
-        this.current = index;
-      }
+      this.seekInput.style.setProperty("--pct", `${(t / duration) * 100}%`);
+      this.clockNode.textContent = `${shortClock(t)} / ${shortClock(duration)}`;
     }
 
     loop() {
@@ -370,34 +252,10 @@
     }
   }
 
-  const stage = new VersusStage();
-  const tiles = [...document.querySelectorAll(".tile[data-game]")];
-  tiles.forEach((tile, index) => {
-    tile.tabIndex = tile.getAttribute("aria-pressed") === "true" ? 0 : -1;
-    tile.addEventListener("click", () => {
-      setPressed(tiles, tile);
-      tiles.forEach((other) => { other.tabIndex = other === tile ? 0 : -1; });
-      stage.select(tile.dataset.game);
-      /* On a phone the tiles sit below the stage: bring the slam back into view. */
-      if (phoneLayout() && stage.stage.getBoundingClientRect().top < 0) stage.stage.scrollIntoView({ block: "start" });
-    });
-    tile.addEventListener("keydown", (event) => {
-      const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
-      if (!step) return;
-      event.preventDefault();
-      const next = tiles[(index + step + tiles.length) % tiles.length];
-      tile.tabIndex = -1;
-      next.tabIndex = 0;
-      next.focus();
-    });
-  });
-  stage.select("elden", { slam: false });
+  const hero = new HeroPlayer();
+  hero.select("elden");
 
-  /* The wordmark joins the nav once the title has scrolled away. */
-  new IntersectionObserver(([entry]) => $(".nav .brand").classList.toggle("is-named", !entry.isIntersecting),
-    { rootMargin: "-56px 0px 0px 0px" }).observe($(".intro h1"));
-
-  /* Compare player for the game sheets */
+  /* Compare player for the eval example */
   class ComparePlayer {
     constructor(root) {
       this.root = root;
@@ -433,10 +291,10 @@
       this.message = bind(el("div", { class: "player__msg", hidden: "" }), null, "This clip could not be loaded. Check your connection and reload the page.");
       this.screen = el("div", { class: "player__screen" },
         this.video, this.canvas, this.wipeHandle,
-        bind(el("span", { class: "player__tag player__tag--a" }), null, "1P ORIGINAL"),
-        bind(el("span", { class: "player__tag player__tag--b" }), null, "2P RECREATION"),
+        bind(el("span", { class: "player__tag player__tag--a" }), null, "Original", "label-original"),
+        bind(el("span", { class: "player__tag player__tag--b" }), null, "Recreation", "label-recreation"),
         this.bigPlay, this.message);
-      this.playButton = el("button", { class: "icon-btn icon-btn--play", type: "button" }, icon("play"));
+      this.playButton = el("button", { class: "icon-btn", type: "button" }, icon("play"));
       this.time = el("div", { class: "player__time", role: "timer" });
       const splitButton = el("button", { type: "button", "aria-pressed": "true", onclick: (event) => {
         this.view = "split";
@@ -458,7 +316,7 @@
         el("div", { class: "player__spacer" }),
         bind(el("div", { class: "seg", role: "group" }, ...views), "aria-label", "View"));
       this.node = el("div", { class: "player", "data-view": "split" },
-        el("div", { class: "player__labels" }, bind(el("span"), null, "1P ORIGINAL"), bind(el("span"), null, "2P RECREATION")),
+        el("div", { class: "player__labels" }, bind(el("span"), null, "Original", "label-original"), bind(el("span"), null, "Recreation", "label-recreation")),
         this.screen, this.seekInput, this.bar);
       this.root.append(this.node);
 
@@ -534,7 +392,7 @@
     }
 
     layout() {
-      const narrow = this.node.clientWidth < 640;
+      const narrow = this.node.clientWidth < 560;
       this.splitButton.textContent = tr(narrow ? "Stacked" : "Side by side");
       const mode = this.view === "wipe" ? "wipe" : narrow ? "stack" : "split";
       this.mode = mode;
@@ -612,11 +470,11 @@
     }
   }
 
-  /* Live clips in the matrix: one video on two canvases, like the stage, so the halves stay in step. */
+  /* Game cards: one clip drawn onto the card's two frames, original above recreation. Each plays while it is in view. */
   const startReel = (root, clips) => {
-    const contexts = [...root.querySelectorAll("canvas")].map((canvas) => canvas.getContext("2d"));
-    const button = $(".cell__play", root);
-    const video = el("video", { muted: "", playsinline: "", preload: "none", class: "cell__source", "aria-hidden": "true", tabindex: "-1" });
+    const contexts = [...root.querySelectorAll(".game__media canvas")].map((canvas) => canvas.getContext("2d"));
+    const button = $(".game__play", root);
+    const video = el("video", { muted: "", playsinline: "", preload: "none", class: "media-source", "aria-hidden": "true", tabindex: "-1" });
     video.muted = true;
     root.append(video);
     let index = 0;
@@ -628,8 +486,9 @@
       const height = video.videoHeight;
       contexts.forEach((context, side) => {
         const { canvas } = context;
-        if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+        if (canvas.width !== Math.round(width) || canvas.height !== height) { canvas.width = width; canvas.height = height; }
         context.drawImage(video, side * width, 0, width, height, 0, 0, width, height);
+        canvas.classList.add("is-live");
       });
     };
     const loop = () => {
@@ -674,9 +533,10 @@
       else video.pause();
     }, { threshold: 0.3 }).observe(root);
   };
-  startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
   startReel($("#elden"), [{ src: "media/elden/demo.mp4" }]);
   startReel($("#gta"), [{ src: "media/gta/demo.mp4" }]);
+  startReel($("#celeste-card"), [celesteClip("ckpt0-wavedash")]);
+  startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
   startReel($("#odyssey"), [{ src: "media/odyssey/demo.mp4" }]);
 
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
