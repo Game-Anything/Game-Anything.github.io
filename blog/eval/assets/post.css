@@ -151,9 +151,10 @@ h1 {
 .figure figure { margin: 0; }
 
 /* The leaderboard: builds grouped by game, the overall pass rate as a bar and a number */
+#tab-1 { max-width: var(--full); overflow-x: auto; }
 .lb { width: 100%; border-collapse: collapse; font-size: 15.5px; line-height: 1.4; }
 .lb thead th { padding: 0 16px 10px 0; border-bottom: 1px solid var(--text); color: var(--text-3); font-size: 14px; font-weight: 500; text-align: left; white-space: nowrap; }
-.lb thead .lb__overall { width: 30%; }
+.lb thead .lb__overall { width: 20%; }
 .lb thead .lb__pct { width: 5.5rem; padding-right: 0; text-align: right; }
 .lb__game th { padding: 22px 0 8px; border-bottom: 1px solid var(--rule); font-size: 15.5px; font-weight: 600; text-align: left; }
 .lb__game small { margin-left: 8px; color: var(--text-3); font-size: 13.5px; font-weight: 400; white-space: nowrap; }
@@ -163,6 +164,7 @@ h1 {
 .lb__meter .bar__value { color: var(--text); font-weight: 500; }
 .lb td.lb__pct { padding-right: 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
 .lb__label { display: none; }
+.lb__missing { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Side-by-side video: the file holds the original in its left half and the recreation in its right half.
    On a phone the page plays a second file with the original above the recreation (see the <source> media). */
@@ -394,12 +396,12 @@ h2:lang(zh-CN) { letter-spacing: 0; }
   .figure { margin-top: 36px; }
   .case { margin-top: 40px; }
   h2 { margin-top: 80px; }
-  /* Leaderboard rows as two lines: the model with its three rates, then the harness and the setting */
+  /* On phones, source pass rates sit below the model, main rates, harness and setting. */
   .lb, .lb thead, .lb tbody { display: block; }
   .lb tr { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 3.75rem); column-gap: 8px; align-items: baseline; }
   .lb thead tr { border-bottom: 1px solid var(--text); }
   .lb thead th { padding: 0 0 8px; border-bottom: 0; font-size: 12.5px; }
-  .lb thead .lb__harness, .lb thead .lb__setting { display: none; }
+  .lb thead .lb__harness, .lb thead .lb__setting, .lb thead .lb__source { display: none; }
   .lb thead .lb__overall, .lb thead .lb__pct { width: auto; text-align: right; }
   .lb tr.lb__game, .lb__game th { display: block; }
   .lb__game th { padding: 18px 0 8px; }
@@ -414,6 +416,9 @@ h2:lang(zh-CN) { letter-spacing: 0; }
   .lb td.lb__pct { grid-row: 1; }
   .lb td.lb__harness { grid-area: 2 / 1; color: var(--text-3); font-size: 13px; }
   .lb td.lb__setting { grid-area: 2 / 2 / auto / -1; color: var(--text-3); font-size: 13px; text-align: right; }
+  .lb td.lb__wiki { grid-area: 3 / 1 / auto / 3; text-align: left; }
+  .lb td.lb__nonwiki { grid-area: 3 / 3 / auto / -1; }
+  .lb__source .lb__label { font-family: var(--sans); font-size: 12px; color: var(--text-3); }
   .lb__label { display: inline; }
   /* Original label above the stacked video, recreation label below it */
   .sbs { display: grid; }

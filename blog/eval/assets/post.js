@@ -99,6 +99,13 @@
     node.append(...content);
     return node;
   };
+  const sourceRate = (rate, className, en, zh) => {
+    const node = cell("td", `lb__pct lb__source ${className}`,
+      cell("span", "lb__label", both(`${en}: `, `${zh}：`)),
+      typeof rate === "number" ? percent(rate) : "—");
+    if (typeof rate !== "number") node.append(cell("span", "lb__missing", both("Not available", "暂无数据")));
+    return node;
+  };
   for (const group of $$("[data-part=leaderboard] tbody[data-game]")) {
     for (const line of (DATA.leaderboard || {})[group.dataset.game] || []) {
       const model = cell("th", "", line.model);
@@ -112,7 +119,9 @@
         both(line.tripoReplay ? "Yes" : "No", line.tripoReplay ? "有" : "无"));
       group.append(cell("tr", "", model, cell("td", "lb__harness", line.harness), setting,
         cell("td", "lb__overall", cell("div", "lb__meter", track, cell("span", "bar__value", percent(line.rate)))),
-        cell("td", "lb__pct", percent(line.gameplay)), cell("td", "lb__pct", percent(line.visual))));
+        cell("td", "lb__pct", percent(line.gameplay)), cell("td", "lb__pct", percent(line.visual)),
+        sourceRate(line.wiki, "lb__wiki", "Wiki", "Wiki 题"),
+        sourceRate(line.nonWiki, "lb__nonwiki", "Non-wiki", "非 Wiki 题")));
     }
   }
 
