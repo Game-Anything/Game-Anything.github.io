@@ -1,5 +1,5 @@
 /* AAA Game Recreation Bench post. Reads window.POST_DATA (assets/data.js, written by build_data.py) to draw the
-   verdict timeline and the question list of Figure 1, the pass-rate bars and the evidence figure. Switches between
+   leaderboard, the verdict timeline and the question list of Figure 2, the pass-rate bars and the evidence figure. Switches between
    English and Chinese, and plays each video muted while it is on screen. All prose stays in index.html. */
 (() => {
   "use strict";
@@ -12,8 +12,8 @@
   /* Language */
   const LANG_KEY = "ga-post-lang";
   const TITLES = {
-    en: "AAA Game Recreation Bench · Are agents ready to recreate real games?",
-    zh: "AAA Game Recreation Bench · 智能体准备好复刻真实游戏了吗？",
+    en: "AAA Game Recreation Bench · Are agents ready to recreate AAA-quality games?",
+    zh: "AAA Game Recreation Bench · 智能体准备好复刻 3A 品质的游戏了吗？",
   };
   const applyLang = (lang) => {
     root.dataset.lang = lang;
@@ -91,6 +91,31 @@
     bar.replaceChildren(label, track, value);
   }
 
+  /* The leaderboard: one row per build under each game, in the order data.js gives them (best first). The names
+     and the numbers of a row come from the same record, so they cannot drift apart. */
+  const cell = (tag, className, ...content) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    node.append(...content);
+    return node;
+  };
+  for (const group of $$("[data-part=leaderboard] tbody[data-game]")) {
+    for (const line of (DATA.leaderboard || {})[group.dataset.game] || []) {
+      const model = cell("th", "", line.model);
+      model.scope = "row";
+      const fill = cell("span", "bar__fill");
+      fill.style.width = `${Math.max(0, Math.min(1, line.rate)) * 100}%`;
+      const track = cell("span", "bar__track", fill);
+      track.setAttribute("aria-hidden", "true");
+      /* The setting's own label only shows on a phone, where its column heading is gone */
+      const setting = cell("td", "lb__setting", cell("span", "lb__label", both("Tripo + replay: ", "Tripo + 回放：")),
+        both(line.tripoReplay ? "Yes" : "No", line.tripoReplay ? "有" : "无"));
+      group.append(cell("tr", "", model, cell("td", "lb__harness", line.harness), setting,
+        cell("td", "lb__overall", cell("div", "lb__meter", track, cell("span", "bar__value", percent(line.rate)))),
+        cell("td", "lb__pct", percent(line.gameplay)), cell("td", "lb__pct", percent(line.visual))));
+    }
+  }
+
   /* Videos play while on screen. One the viewer paused, or that a question moved, stays where it is. */
   const scrolledAway = new WeakSet();
   const videos = $$("video[data-autoplay]");
@@ -129,7 +154,7 @@
     if (box.top < 0 || box.bottom > innerHeight) video.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
   };
 
-  /* Figure 1 (data-case is on the block that holds the figure and its list): the verdict timeline and the folded
+  /* Figure 2 (data-case is on the block that holds the figure and its list): the verdict timeline and the folded
      list of every question */
   for (const figure of $$("[data-case]")) {
     const recording = DATA.cases[figure.dataset.case];
@@ -282,7 +307,7 @@
     }
   }
 
-  /* Figure 3: one visual question as the judge saw it */
+  /* Figure 4: one visual question as the judge saw it */
   for (const figure of $$("[data-pair]")) {
     const pair = (DATA.pairs || []).find((item) => item.key === figure.dataset.pair);
     if (!pair) continue;

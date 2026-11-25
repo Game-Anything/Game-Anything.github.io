@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AAA Game Recreation Bench · Are agents ready to recreate real games?</title>
+<title>AAA Game Recreation Bench · Are agents ready to recreate AAA-quality games?</title>
 <meta name="description" content="We challenge frontier coding agents to recreate existing commercial games from scratch. Built on trajectories from real human gameplay, our benchmark evaluates each recreation through deterministic input replay and fine-grained rubrics grounded in community wikis.">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="data:,">
@@ -46,8 +46,8 @@
 
   <section class="hero wrap">
     <h1>AAA Game Recreation Bench</h1>
-    <p class="subtitle" data-l="en"><span>Are agents ready to recreate real games?</span> <span>And how would we know?</span></p>
-    <p class="subtitle" data-l="zh" lang="zh-CN"><span>智能体准备好复刻真实游戏了吗？</span><span>我们又该如何评测？</span></p>
+    <p class="subtitle" data-l="en"><span>Are agents ready to recreate</span> <span>AAA-quality games?</span></p>
+    <p class="subtitle" data-l="zh" lang="zh-CN"><span>智能体准备好复刻</span> <span>3A 品质的游戏了吗？</span></p>
     <p class="byline" data-l="en">RecreateAAA Team · November 2026</p>
     <p class="byline" data-l="zh" lang="zh-CN">RecreateAAA 团队 · 2026年11月</p>
     <p class="dek" data-l="en">We challenge frontier coding agents to recreate existing commercial games from scratch. Built on trajectories from real human gameplay, our benchmark evaluates each recreation through deterministic input replay and fine-grained rubrics grounded in community wikis.</p>
@@ -56,9 +56,67 @@
       <a class="pill pill--primary" href="https://game-anything.github.io/"><span data-l="en">Project page</span><span data-l="zh" lang="zh-CN">项目主页</span><svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></a>
     </p>
 
-    <!-- Figure 1 and, after its caption, the folded list of every question on the same recording -->
+    <!-- One video holds six cells so they stay in step: the original and the Tripo build (the two halves of the team's
+         sekiro-f1-gt-tripo-comparison.mp4), then the replays from four builds named by agent and model. -->
+    <figure class="figure figure--full" id="fig-1">
+      <div class="grid-video">
+        <video poster="media/sekiro-models.webp" data-stack-poster="media/sekiro-models-stack.webp" width="1936" height="728" muted loop playsinline controls preload="metadata" data-autoplay aria-label="Sekiro: Shadows Die Twice, the original recording and five recreations replaying its inputs">
+          <source src="media/sekiro-models-stack.mp4" type="video/mp4" media="(max-width: 760px)">
+          <source src="media/sekiro-models.mp4" type="video/mp4">
+        </video>
+        <ol class="grid-video__labels" aria-hidden="true">
+          <li><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></li>
+          <li><span data-l="en">With Tripo</span><span data-l="zh" lang="zh-CN">使用 Tripo</span></li>
+          <li>Codex · GPT-6.1 Terra</li>
+          <li>Codex · GPT-6 Astra</li>
+          <li>DeepSeek Harness · 4.1 Flash</li>
+          <li>Kimi Code · K3.1</li>
+        </ol>
+      </div>
+      <figcaption>
+        <span data-l="en"><b>Figure 1.</b> Sekiro: Shadows Die Twice.</span>
+        <span data-l="zh" lang="zh-CN"><b>图 1.</b> 《只狼：影逝二度》</span>
+      </figcaption>
+    </figure>
+
+    <!-- The leaderboard: post.js adds one row per build under each game from assets/data.js (leaderboard), best
+         first. The game rows, with the judge and the number of questions, are written here. It has no caption. -->
+    <figure class="figure" id="tab-1">
+      <table class="lb" data-part="leaderboard">
+        <thead>
+          <tr>
+            <th scope="col"><span data-l="en">Model</span><span data-l="zh" lang="zh-CN">模型</span></th>
+            <th scope="col" class="lb__harness"><span data-l="en">Harness</span><span data-l="zh" lang="zh-CN">框架</span></th>
+            <th scope="col" class="lb__setting"><span data-l="en">Tripo + replay</span><span data-l="zh" lang="zh-CN">Tripo + 回放</span></th>
+            <th scope="col" class="lb__overall"><span data-l="en">Overall</span><span data-l="zh" lang="zh-CN">总体</span></th>
+            <th scope="col" class="lb__pct"><span data-l="en">Gameplay</span><span data-l="zh" lang="zh-CN">玩法机制</span></th>
+            <th scope="col" class="lb__pct"><span data-l="en">Visual</span><span data-l="zh" lang="zh-CN">视觉还原</span></th>
+          </tr>
+        </thead>
+        <tbody data-game="sekiro">
+          <tr class="lb__game"><th colspan="6" scope="rowgroup">
+            <span data-l="en">Sekiro: Shadows Die Twice, early game <small>GPT-6 Astra judge · 184 questions</small></span>
+            <span data-l="zh" lang="zh-CN">《只狼：影逝二度》开局流程 <small>裁判 GPT-6 Astra · 184 题</small></span>
+          </th></tr>
+        </tbody>
+        <tbody data-game="sf6">
+          <tr class="lb__game"><th colspan="6" scope="rowgroup">
+            <span data-l="en">Street Fighter 6, Ryu vs. Ken <small>Claude Opus 5.5 judge · 611 questions</small></span>
+            <span data-l="zh" lang="zh-CN">《街头霸王6》隆对肯 <small>裁判 Claude Opus 5.5 · 611 题</small></span>
+          </th></tr>
+        </tbody>
+        <tbody data-game="celeste">
+          <tr class="lb__game"><th colspan="6" scope="rowgroup">
+            <span data-l="en">Celeste, Chapter 1 <small>GPT-6 Astra judge · 466 questions</small></span>
+            <span data-l="zh" lang="zh-CN">《蔚蓝》第一章 <small>裁判 GPT-6 Astra · 466 题</small></span>
+          </th></tr>
+        </tbody>
+      </table>
+    </figure>
+
+    <!-- Figure 2 and, after its caption, the folded list of every question on the same recording -->
     <div class="case" data-case="sf6">
-      <figure class="figure" id="fig-1">
+      <figure class="figure" id="fig-2">
         <div class="sbs">
           <div class="sbs__labels" aria-hidden="true">
             <span><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></span>
@@ -75,8 +133,8 @@
           <span data-l="zh" lang="zh-CN">点击时间轴上的标记，跳到对应时刻并查看裁判的理由。</span>
         </p>
         <figcaption>
-          <span data-l="en"><b>Figure 1.</b> Street Fighter 6, original (left) and an agent’s recreation (right) driven side by side using identical keystrokes. Each marker along the timeline represents the judge’s verdict on a specific rubric question at that exact timestamp.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 1.</b> 《街头霸王6》原版（左）与智能体复刻版（右）在相同按键输入下的并排运行对比。底部时间轴上的每个标记，代表裁判模型在对应时间点对一道具体评分题目的裁决结果。</span>
+          <span data-l="en"><b>Figure 2.</b> Street Fighter 6, original (left) and an agent’s recreation (right) driven side by side using identical keystrokes. Each marker along the timeline represents the judge’s verdict on a specific rubric question at that exact timestamp.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 2.</b> 《街头霸王6》原版（左）与智能体复刻版（右）在相同按键输入下的并排运行对比。底部时间轴上的每个标记，代表裁判模型在对应时间点对一道具体评分题目的裁决结果。</span>
         </figcaption>
       </figure>
       <details class="allq">
@@ -142,7 +200,7 @@
       <p data-l="zh" lang="zh-CN">我们的《街头霸王6》任务聚焦于训练模式下的“隆（Ryu）对战肯（Ken）”。一名玩家录制了 23 段短流程实机操作，涵盖基础移动、通常技、必杀技、斗气系统（Drive System）、超必杀技（Super Arts）以及连段。每段录像均从指定的训练模式预设状态开始；智能体的复刻版必须提供对应的初始状态接口，以确保每次回放都在同一起跑线上进行。</p>
       <p data-l="zh" lang="zh-CN">评测任务同样可以从带有屏幕按键显示的公开实机视频中提取。例如，我们的《侠盗猎车手5》（GTA V）和《赛博朋克2077》任务，便直接切片自 NitroGen 数据集 [<a href="#ref-6">6</a>] 中的此类公开录像。</p>
 
-      <figure class="figure" id="fig-2">
+      <figure class="figure" id="fig-3">
         <div class="grid4">
           <figure class="clip">
             <h3><span data-l="en">Street Fighter 6 · movement</span><span data-l="zh" lang="zh-CN">《街头霸王6》· 基础移动</span></h3>
@@ -186,8 +244,8 @@
           </figure>
         </div>
         <figcaption>
-          <span data-l="en"><b>Figure 2.</b> Four evaluation sessions showing the original game and the agent’s recreation running side by side under identical inputs.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 2.</b> 四组测试片段中，原版游戏与智能体复刻版在相同输入下的并排运行画面。</span>
+          <span data-l="en"><b>Figure 3.</b> Four evaluation sessions showing the original game and the agent’s recreation running side by side under identical inputs.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 3.</b> 四组测试片段中，原版游戏与智能体复刻版在相同输入下的并排运行画面。</span>
         </figcaption>
       </figure>
     </section>
@@ -243,7 +301,7 @@
       <p data-l="en"><b>Accounting for timing offsets.</b> Gameplay questions are evaluated over multi-frame sequences sampled from both recordings. Visual questions inspect specific timestamps: the reference frame at timestamp <i>t</i>, the corresponding candidate frame under the same input sequence, and the canonical move illustration from the wiki. Because Street Fighter 6 exhibits roughly five frames of input-to-animation latency whereas web recreations typically respond instantaneously, we also provide the judge with candidate frames from three and six game frames prior (<i>t</i>&#8202;−&#8202;3F and <i>t</i>&#8202;−&#8202;6F).</p>
       <p data-l="zh" lang="zh-CN"><b>消除输入响应延迟偏差。</b>玩法机制题基于从两段录像中采样的多帧序列进行作答；视觉还原题则基于固定时间点的关键帧进行比对：包括问题指定时刻 <i>t</i> 的原版画面、相同输入序列同一时刻的复刻版画面，以及 Wiki 中该招式的标准示意图。由于《街头霸王6》从按下按键到画面出招存在约 5 帧的输入延迟，而网页复刻版通常是零延迟即时响应，我们还会额外向裁判提供复刻版提前 3 帧与提前 6 帧（<i>t</i>&#8202;−&#8202;3F 与 <i>t</i>&#8202;−&#8202;6F）的画面，以消除时序偏移带来的误判。</p>
 
-      <figure class="figure evidence" id="fig-3" data-pair="move_hphk_block_look">
+      <figure class="figure evidence" id="fig-4" data-pair="move_hphk_block_look">
         <div class="evidence__row">
           <figure class="shot"><img src="media/pairs/ref_move_hphk_block_look_9.50s.webp" data-part="reference" alt="Original game: Ryu lunges into Ken with a punch, trailing ink strokes" loading="lazy" decoding="async" width="800" height="450"><figcaption data-part="reference-label"><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></figcaption></figure>
           <figure class="shot shot--wiki"><img src="media/pairs/wiki_SF6_Ryu_hphk.webp" data-part="wiki" alt="Wiki image of the move: a lunging punch trailing ink" loading="lazy" decoding="async" width="536" height="360"><figcaption><span data-l="en">Wiki</span><span data-l="zh" lang="zh-CN">Wiki 图鉴</span></figcaption></figure>
@@ -254,8 +312,8 @@
           <p><b><span data-l="en">Judge.</span><span data-l="zh" lang="zh-CN">裁判理由：</span></b> <span data-part="reason" lang="en"></span></p>
         </div>
         <figcaption>
-          <span data-l="en"><b>Figure 3.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink; the agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 3.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳；而智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
+          <span data-l="en"><b>Figure 4.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink; the agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 4.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳；而智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
         </figcaption>
       </figure>
     </section>
@@ -274,18 +332,18 @@
       <h2 data-l="zh" lang="zh-CN">核心实验发现</h2>
       <p data-l="en">Frontier agents still struggle to pass even half of our rubric questions—and performance drops sharply on unseen trajectories.</p>
       <ul class="findings" data-l="en">
-        <li><b>Generalization gaps:</b> On Celeste, accuracy falls from 49% on given trajectories to 34% on held-out test trajectories, showing that matching reference clips is far easier than synthesizing generalizable platforming physics.</li>
-        <li><b>Procedural rendering vs. generated 3D assets:</b> When an agent renders visuals purely via procedural code (as in Celeste), nearly every visual check fails (8% pass rate). Conversely, in Street Fighter 6, where the agent used Tripo to generate 3D fighter meshes, visual fidelity (46%) roughly keeps pace with gameplay accuracy (47%).</li>
+        <li><b>Generalization gaps:</b> On Celeste, accuracy falls from 46% on given trajectories to 30% on held-out test trajectories, showing that matching reference clips is far easier than synthesizing generalizable platforming physics.</li>
+        <li><b>Procedural rendering vs. generated 3D assets:</b> When an agent renders visuals purely via procedural code (as in Celeste), nearly every visual check fails (7% pass rate). Conversely, in Street Fighter 6, where the agent used Tripo to generate 3D fighter meshes, visual fidelity (46%) roughly keeps pace with gameplay accuracy (46%).</li>
       </ul>
       <p data-l="zh" lang="zh-CN">目前，前沿智能体在两款游戏上的总通过率均未过半；而在未见过的留出轨迹上，表现更是出现明显滑坡。</p>
       <ul class="findings" data-l="zh" lang="zh-CN">
-        <li><b>显著的泛化差距：</b>在《蔚蓝》任务中，复刻版在可见录像上的通过率为 49%，但在未见过的留出测试集上跌至 34%。这表明，照着参考视频“对画面”远比编写一套可泛化的平台跳跃物理引擎容易得多。</li>
-        <li><b>纯代码手绘 vs. 3D 资产生成：</b>当智能体完全依赖纯代码绘制所有画面时（如《蔚蓝》），视觉题几乎全军覆没（通过率仅 8%）。相比之下，在《街头霸王6》中，智能体调用了 Tripo 生成 3D 角色模型，其视觉题通过率（46%）与玩法机制题（47%）基本持平。</li>
+        <li><b>显著的泛化差距：</b>在《蔚蓝》任务中，复刻版在可见录像上的通过率为 46%，但在未见过的留出测试集上跌至 30%。这表明，照着参考视频“对画面”远比编写一套可泛化的平台跳跃物理引擎容易得多。</li>
+        <li><b>纯代码手绘 vs. 3D 资产生成：</b>当智能体完全依赖纯代码绘制所有画面时（如《蔚蓝》），视觉题几乎全军覆没（通过率仅 7%）。相比之下，在《街头霸王6》中，智能体调用了 Tripo 生成 3D 角色模型，其视觉题通过率（46%）与玩法机制题（46%）基本持平。</li>
       </ul>
 
       <!-- Each bar's label is its text; data-rate names the pass rate in assets/data.js. -->
       <div class="figs-2">
-        <figure class="figure" id="fig-4">
+        <figure class="figure" id="fig-5">
           <div class="bars">
             <p class="bar" data-rate="results.sf6.sides.0.rate"><span data-l="en">Gameplay</span><span data-l="zh" lang="zh-CN">玩法机制</span></p>
             <p class="bar" data-rate="results.sf6.sides.1.rate"><span data-l="en">Visual</span><span data-l="zh" lang="zh-CN">视觉还原</span></p>
@@ -293,11 +351,11 @@
             <p class="bar" data-rate="results.sf6.sources.1.rate"><span data-l="en">Other</span><span data-l="zh" lang="zh-CN">其他基础题</span></p>
           </div>
           <figcaption>
-            <span data-l="en"><b>Figure 4.</b> Street Fighter 6 recreation built by Codex (GPT-6 Astra), evaluated by Claude Opus 5.5 across 23 sessions (Nov 7, 2026), using an earlier 611-question version of the rubric.</span>
-            <span data-l="zh" lang="zh-CN"><b>图 4.</b> 《街头霸王6》复刻评测结果（由基于 GPT-6 Astra 的 Codex 构建，Claude Opus 5.5 基于 23 段录像于 11月7日 裁决；当时使用的是早期 611 题版本的评分准则）。</span>
+            <span data-l="en"><b>Figure 5.</b> Street Fighter 6 recreation built by Codex (GPT-6 Astra), evaluated by Claude Opus 5.5 across 23 sessions (Nov 7, 2026), using an earlier 611-question version of the rubric.</span>
+            <span data-l="zh" lang="zh-CN"><b>图 5.</b> 《街头霸王6》复刻评测结果（由基于 GPT-6 Astra 的 Codex 构建，Claude Opus 5.5 基于 23 段录像于 11月7日 裁决；当时使用的是早期 611 题版本的评分准则）。</span>
           </figcaption>
         </figure>
-        <figure class="figure" id="fig-5">
+        <figure class="figure" id="fig-6">
           <div class="bars">
             <p class="bar" data-rate="results.celeste.0.rate"><span data-l="en">Given (9 sessions)</span><span data-l="zh" lang="zh-CN">可见集（9 段）</span></p>
             <p class="bar" data-rate="results.celeste.1.rate"><span data-l="en">Held-out (23 sessions)</span><span data-l="zh" lang="zh-CN">留出测试集（23 段）</span></p>
@@ -305,36 +363,13 @@
             <p class="bar" data-rate="results.celesteSides.1.rate"><span data-l="en">Visual</span><span data-l="zh" lang="zh-CN">视觉还原</span></p>
           </div>
           <figcaption>
-            <span data-l="en"><b>Figure 5.</b> Celeste (Chapter 1) recreation built by Codex, evaluated by GPT-6 Astra across 32 sessions.</span>
-            <span data-l="zh" lang="zh-CN"><b>图 5.</b> 《蔚蓝》（第一章）复刻评测结果（由 Codex 构建，GPT-6 Astra 基于 32 段录像裁决）。</span>
+            <span data-l="en"><b>Figure 6.</b> Celeste (Chapter 1) recreation built by Codex, evaluated by GPT-6 Astra across 32 sessions.</span>
+            <span data-l="zh" lang="zh-CN"><b>图 6.</b> 《蔚蓝》（第一章）复刻评测结果（由 Codex 构建，GPT-6 Astra 基于 32 段录像裁决）。</span>
           </figcaption>
         </figure>
       </div>
-      <p class="note" data-l="en">(Note: Pass rates are computed as Passes / (Passes + Fails), excluding abstentions.)</p>
-      <p class="note" data-l="zh" lang="zh-CN">（注：通过率计算公式为 通过数 / (通过数 + 失败数)，不含裁判弃权项。）</p>
-
-      <!-- One video holds six cells so they stay in step: the original and the Tripo build (the two halves of the team's
-           sekiro-f1-gt-tripo-comparison.mp4), then the replays from four builds named by agent and model. -->
-      <figure class="figure figure--full" id="fig-6">
-        <div class="grid-video">
-          <video poster="media/sekiro-models.webp" data-stack-poster="media/sekiro-models-stack.webp" width="1936" height="728" muted loop playsinline controls preload="none" data-autoplay aria-label="Sekiro: Shadows Die Twice, the original recording and five recreations replaying its inputs">
-            <source src="media/sekiro-models-stack.mp4" type="video/mp4" media="(max-width: 760px)">
-            <source src="media/sekiro-models.mp4" type="video/mp4">
-          </video>
-          <ol class="grid-video__labels" aria-hidden="true">
-            <li><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></li>
-            <li><span data-l="en">With Tripo</span><span data-l="zh" lang="zh-CN">使用 Tripo</span></li>
-            <li>Codex · GPT-6.1 Terra</li>
-            <li>Codex · GPT-6 Astra</li>
-            <li>DeepSeek Harness · 4.1 Flash</li>
-            <li>Kimi Code · K3.1</li>
-          </ol>
-        </div>
-        <figcaption>
-          <span data-l="en"><b>Figure 6.</b> Sekiro: Shadows Die Twice. The original recording and five recreations replaying its inputs. Labels name the agent and model behind each recreation; “With Tripo” marks a build whose 3D assets were generated with Tripo.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 6.</b> 《只狼：影逝二度》原版录像，以及回放同一段按键输入的五个复刻版。标签注明了各复刻版背后的智能体与模型；“使用 Tripo”一格的 3D 资产由 Tripo 生成。</span>
-        </figcaption>
-      </figure>
+      <p class="note" data-l="en">(Note: Pass rates are computed as Passes / All questions; a question the judge abstains on counts as not passed.)</p>
+      <p class="note" data-l="zh" lang="zh-CN">（注：通过率计算公式为 通过数 / 全部题数，裁判弃权的题按未通过计。）</p>
     </section>
 
     <section class="sec" id="judge">
@@ -400,7 +435,7 @@
   </div>
 </footer>
 
-<noscript><p class="noscript">The timeline, the question list, the charts and the evidence figure need JavaScript.</p></noscript>
+<noscript><p class="noscript">The leaderboard’s rows, the timeline, the question list, the charts and the evidence figure need JavaScript.</p></noscript>
 
 <template id="tpl-question">
   <li class="qs__item">

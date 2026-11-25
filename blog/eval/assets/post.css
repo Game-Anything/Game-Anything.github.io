@@ -136,7 +136,7 @@ h1 {
 /* Figures */
 .figure { max-width: var(--wide); margin: 48px auto 0; text-align: left; }
 .sec > .figure { margin-bottom: 32px; }
-/* Figure 1 and its question list share one wider block */
+/* Figure 2 and its question list share one wider block */
 .case { max-width: var(--full); margin: 60px auto 0; text-align: left; }
 .case > .figure { max-width: none; margin: 0; }
 .figure > figcaption {
@@ -150,12 +150,26 @@ h1 {
 .figure > figcaption :lang(zh-CN) { line-height: 1.75; }
 .figure figure { margin: 0; }
 
+/* The leaderboard: builds grouped by game, the overall pass rate as a bar and a number */
+.lb { width: 100%; border-collapse: collapse; font-size: 15.5px; line-height: 1.4; }
+.lb thead th { padding: 0 16px 10px 0; border-bottom: 1px solid var(--text); color: var(--text-3); font-size: 14px; font-weight: 500; text-align: left; white-space: nowrap; }
+.lb thead .lb__overall { width: 30%; }
+.lb thead .lb__pct { width: 5.5rem; padding-right: 0; text-align: right; }
+.lb__game th { padding: 22px 0 8px; border-bottom: 1px solid var(--rule); font-size: 15.5px; font-weight: 600; text-align: left; }
+.lb__game small { margin-left: 8px; color: var(--text-3); font-size: 13.5px; font-weight: 400; white-space: nowrap; }
+.lb tbody th[scope="row"] { padding: 11px 16px 11px 0; border-bottom: 1px solid var(--rule); font-weight: 500; text-align: left; white-space: nowrap; }
+.lb td { padding: 11px 16px 11px 0; border-bottom: 1px solid var(--rule); color: var(--text-2); }
+.lb__meter { display: grid; grid-template-columns: minmax(0, 1fr) 3rem; gap: 12px; align-items: center; }
+.lb__meter .bar__value { color: var(--text); font-weight: 500; }
+.lb td.lb__pct { padding-right: 0; font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.lb__label { display: none; }
+
 /* Side-by-side video: the file holds the original in its left half and the recreation in its right half.
    On a phone the page plays a second file with the original above the recreation (see the <source> media). */
 .sbs__labels { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 8px; color: var(--text-3); font-size: 14px; }
 .sbs video { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 12px; background: #0b0b0c; }
 
-/* Verdict timeline under Figure 1. JS sets --lane (-1, 0 or 1) to lift or drop a marker that would touch its neighbour. */
+/* Verdict timeline under Figure 2. JS sets --lane (-1, 0 or 1) to lift or drop a marker that would touch its neighbour. */
 .tl { --tl-row: 30px; --tl-step: 7px; display: grid; grid-template-columns: 5rem minmax(0, 1fr); column-gap: 12px; margin-top: 16px; }
 .tl__names { display: grid; grid-template-rows: var(--tl-row) var(--tl-row); align-items: center; color: var(--text-3); font-size: 13px; }
 .tl__body { position: relative; }
@@ -263,7 +277,7 @@ h2:lang(zh-CN) { letter-spacing: 0; }
 .findings li::marker { color: var(--text-3); }
 .steps b, .findings b, .sec > p b { font-weight: 600; }
 
-/* The pass-rate note reads as a caption to Figures 4 and 5, so it lines up with their left edge */
+/* The pass-rate note reads as a caption to Figures 5 and 6, so it lines up with their left edge */
 .sec > .note { max-width: var(--wide); margin-top: 16px; color: var(--text-3); font-size: 15px; line-height: 1.55; }
 
 /* Task / input / output */
@@ -321,7 +335,7 @@ h2:lang(zh-CN) { letter-spacing: 0; }
 .bar__fill { height: 100%; border-radius: 0 5px 5px 0; background: var(--accent); }
 .bar__value { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
 
-/* Sekiro grid: one video of six cells (3 × 2; 2 × 3 on a phone) with a label over each cell's top-left corner */
+/* Figure 1, the cover: one video of six Sekiro cells (3 × 2; 2 × 3 on a phone) with a label over each cell's top-left corner */
 .figure--full { max-width: var(--full); }
 .grid-video { position: relative; }
 .grid-video video { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 12px; background: #0b0b0c; }
@@ -380,6 +394,27 @@ h2:lang(zh-CN) { letter-spacing: 0; }
   .figure { margin-top: 36px; }
   .case { margin-top: 40px; }
   h2 { margin-top: 80px; }
+  /* Leaderboard rows as two lines: the model with its three rates, then the harness and the setting */
+  .lb, .lb thead, .lb tbody { display: block; }
+  .lb tr { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 3.75rem); column-gap: 8px; align-items: baseline; }
+  .lb thead tr { border-bottom: 1px solid var(--text); }
+  .lb thead th { padding: 0 0 8px; border-bottom: 0; font-size: 12.5px; }
+  .lb thead .lb__harness, .lb thead .lb__setting { display: none; }
+  .lb thead .lb__overall, .lb thead .lb__pct { width: auto; text-align: right; }
+  .lb tr.lb__game, .lb__game th { display: block; }
+  .lb__game th { padding: 18px 0 8px; }
+  .lb__game small { display: block; margin: 2px 0 0; }
+  .lb tbody tr:not(.lb__game) { row-gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+  .lb tbody tr:not(.lb__game) > * { width: auto; padding: 0; border: 0; }
+  .lb tbody th[scope="row"] { grid-area: 1 / 1; white-space: normal; }
+  .lb td.lb__overall { grid-area: 1 / 2; }
+  .lb__meter { display: block; }
+  .lb__meter .bar__track { display: none; }
+  .lb__meter .bar__value { display: block; }
+  .lb td.lb__pct { grid-row: 1; }
+  .lb td.lb__harness { grid-area: 2 / 1; color: var(--text-3); font-size: 13px; }
+  .lb td.lb__setting { grid-area: 2 / 2 / auto / -1; color: var(--text-3); font-size: 13px; text-align: right; }
+  .lb__label { display: inline; }
   /* Original label above the stacked video, recreation label below it */
   .sbs { display: grid; }
   .sbs__labels { display: contents; }
