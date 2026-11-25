@@ -149,12 +149,12 @@
     <section class="sec" id="why">
       <h2 data-l="en">Why Recreation?</h2>
       <h2 data-l="zh" lang="zh-CN">为什么要做“游戏复刻”？</h2>
-      <p data-l="en">Benchmarks for automated game development are emerging rapidly [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]. Most follow an open-ended setup: give an agent a text prompt, then ask a language model to grade the resulting game. Because an open-ended prompt admits countless valid designs, there is no ground truth—leaving the evaluation reliant on a judge’s subjective notion of what makes a game “good.”</p>
-      <p data-l="en">Recreation anchors evaluation in ground truth. When an agent rebuilds an existing game, the original title serves as the answer key. We play the original game once, log every controller input alongside the video, and replay that exact input sequence on the agent’s recreation. Rather than scoring abstract quality, the judge simply verifies whether the same actions produce the same outcomes at the exact same moments.</p>
-      <p data-l="en">Recreation also measures a capability that open-ended generation overlooks: reverse-engineering mechanics from pixels. To rebuild a game from footage, an agent must infer underlying rules directly from the screen—how far a dash travels, how many frames a jab takes, or how hitstop feels on impact. Frontier vision–language models remain notoriously weak at this kind of situated visual understanding (Figure 3).</p>
-      <p data-l="zh" lang="zh-CN">面向游戏开发的 AI 评测基准正在快速涌现 [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]。目前主流的做法通常是开放式生成：给智能体一段文本提示词（Prompt），再让大语言模型去给生成的游戏打分。然而，一句提示词可以对应无数种合理的游戏设计——由于缺乏客观真值（Ground Truth），最终得分往往完全取决于裁判模型对“什么是好游戏”的主观偏好。</p>
-      <p data-l="zh" lang="zh-CN"><b>“复刻”让评测第一次有了客观的标准答案。</b>当智能体重建一款现有游戏时，原版游戏就是天然的参考系。我们将人类游玩原版游戏时的每一次按键操作连同画面一并录制下来，随后在智能体构建的复刻游戏中，从相同的初始状态回放完全一致的按键序列。此时，裁判不再需要评判抽象的“好玩程度”，只需核验：在同一时刻、相同输入下，两边是否发生了完全相同的事。</p>
-      <p data-l="zh" lang="zh-CN">此外，游戏复刻还考察了一项开放式生成无法触及的核心能力：从像素中逆向工程游戏机制。要想仅凭实机录像重建一款游戏，智能体必须直接从画面中读懂底层规则——冲刺一次移动多远、挥出一拳需要多少帧、命中时的受击反馈长什么样。而当前前沿的视觉-语言模型（VLM），恰恰在这种情境化的动态视觉理解上表现薄弱（图 3）。</p>
+      <p data-l="en">Benchmarks for automated game development are emerging rapidly [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]. Most follow an open-ended setup: give an agent a text prompt, then ask a language model to grade the resulting game. Because an open-ended prompt admits countless valid designs, there is no ground truth, and the evaluation rests on that model’s subjective notion of what makes a game “good.”</p>
+      <p data-l="en">Recreation anchors evaluation in ground truth. When an agent recreates an existing game, the original game is the ground truth. We play the original game once, log every controller input alongside the video, and replay that exact input sequence on the agent’s recreation. The judge only has to verify whether the same inputs produce the same outcomes at the exact same moments, without scoring abstract quality.</p>
+      <p data-l="en">Recreation also measures a capability that open-ended generation overlooks: reverse-engineering mechanics from pixels. To recreate a game from footage, an agent must infer the mechanics directly from that footage, such as how far a dash travels, how many frames a jab takes, and what hitstop feels like on impact. Frontier vision–language models remain notoriously weak at this kind of situated visual understanding (Figure 3).</p>
+      <p data-l="zh" lang="zh-CN">面向游戏开发的 AI 评测基准正在快速涌现 [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]。目前主流的做法通常是开放式生成：给智能体一段文本提示词（Prompt），再让大语言模型去给生成的游戏打分。然而，一句提示词可以对应无数种合理的游戏设计。由于缺乏客观真值（Ground Truth），最终得分往往完全取决于大语言模型对“什么是好游戏”的主观偏好。</p>
+      <p data-l="zh" lang="zh-CN"><b>“复刻”让评测第一次有了客观的标准答案。</b>智能体复刻一款现有游戏，原版游戏就是天然的标准答案。我们将人类游玩原版游戏时的每一次按键操作连同画面一并录制下来，随后在智能体构建的复刻游戏中，从相同的初始状态回放完全一致的按键序列。此时，裁判只需核验在同一时刻、相同按键下，两边是否发生了完全相同的事，用不着评判抽象的“好玩程度”。</p>
+      <p data-l="zh" lang="zh-CN">游戏复刻还考察了一项开放式生成无法触及的核心能力：从像素中逆向工程游戏机制。要想仅凭实机画面复刻一款游戏，智能体必须直接从画面中读懂游戏机制，比如冲刺一次移动多远、挥出一拳需要多少帧，还有命中时的受击反馈是什么样。而当前前沿的视觉-语言模型（VLM），恰恰在这种情境化的动态视觉理解上表现薄弱（图 3）。</p>
 
       <!-- A mechanic read wrongly from footage: Celeste checkpoint 2, one of the recordings the builder was given,
            from 6.0 to 9.7 s. The judge failed "Dash distance" on this replay. -->
@@ -211,10 +211,10 @@
           <tr><th scope="row">模型输出</th><td>在相同输入序列下，行为表现与原版一致的可交互网页游戏</td></tr>
         </tbody>
       </table>
-      <p data-l="en">Our Street Fighter 6 benchmark centers on a Ryu vs. Ken matchup in Training Mode. A human player recorded 23 short sessions spanning basic movement, normals, special moves, the Drive system, Super Arts, and combos. Each session begins from a named training preset; the agent’s recreation must expose matching states so every replay starts from identical initial conditions.</p>
-      <p data-l="en">The environment can scale well beyond our own recordings. Every task starts from gameplay footage and the inputs behind it, and the NitroGen dataset [<a href="#ref-5">5</a>] provides exactly that at scale: gamepad inputs read from on-screen input overlays for 40,000 hours of public gameplay video, across more than 1,000 games.</p>
-      <p data-l="zh" lang="zh-CN">我们的《街头霸王6》任务聚焦于训练模式下的“隆（Ryu）对战肯（Ken）”。一名玩家录制了 23 段短流程实机操作，涵盖基础移动、通常技、必杀技、斗气系统（Drive System）、超必杀技（Super Arts）以及连段。每段录像均从指定的训练模式预设状态开始；智能体的复刻版必须提供对应的初始状态接口，以确保每次回放都在同一起跑线上进行。</p>
-      <p data-l="zh" lang="zh-CN">这套环境的规模可以远超我们自己录制的内容。每个任务的起点都是实机画面加上对应的按键输入，而 NitroGen 数据集 [<a href="#ref-5">5</a>] 正好大规模地提供了这两样：它从屏幕上的按键显示（Input Overlay）中读出手柄输入，覆盖 1,000 多款游戏、共 40,000 小时的公开实机视频。</p>
+      <p data-l="en">Our Street Fighter 6 benchmark centers on a Ryu vs. Ken matchup in Training Mode. A human player recorded 23 short sessions spanning basic movement, normals, special moves, the Drive system, Super Arts, and combos. Each session begins from a named training preset. The agent’s recreation must expose matching presets so every replay starts from identical initial conditions.</p>
+      <p data-l="en">The environment can scale well beyond our own recordings. Every task starts from gameplay video and the inputs behind it. The NitroGen dataset [<a href="#ref-5">5</a>] has gamepad inputs, read from on-screen input overlays, for 40,000 hours of public gameplay video across more than 1,000 games.</p>
+      <p data-l="zh" lang="zh-CN">我们的《街头霸王6》任务聚焦于训练模式下的“隆（Ryu）对战肯（Ken）”。一名玩家录制了 23 段短录像，涵盖基础移动、通常技、必杀技、斗气系统（Drive System）、超必杀技（Super Arts）以及连段。每段录像均从指定的训练模式预设状态开始。智能体的复刻版必须提供对应的预设状态接口，以确保每次回放都在同一起跑线上进行。</p>
+      <p data-l="zh" lang="zh-CN">这套环境的规模可以远超我们自己录制的内容。每个任务的起点都是实机视频加上对应的按键输入。NitroGen 数据集 [<a href="#ref-5">5</a>] 从屏幕上的按键显示（Input Overlay）中读出手柄输入，覆盖 1,000 多款游戏、共 40,000 小时的公开实机视频。</p>
 
       <figure class="figure" id="fig-4">
         <div class="grid4">
@@ -271,7 +271,7 @@
       <h2 data-l="zh" lang="zh-CN">锚定游戏 Wiki 的评分准则</h2>
       <p data-l="en">Raw video shows that a punch came out, but rarely reveals when its hitbox becomes active on the fourth frame. Questions derived from video alone are often forced to ask whether two clips “look similar,” pushing ambiguity back onto the judge.</p>
       <p data-l="en">Community wikis bridge this gap. For Street Fighter 6, the SuperCombo Wiki [<a href="#ref-3">3</a>] documents exact startup, active, and recovery frames, alongside damage and stun values for every move. Because the game’s Training Mode renders startup, total duration, and damage directly on the HUD, our judge can cross-examine both the visual action and the exact frame-meter readouts across recordings.</p>
-      <p data-l="zh" lang="zh-CN">单凭实机画面，你能看出角色挥出了一拳，但很难看出这一拳是在“第 4 帧”才开始产生攻击判定的。如果仅依赖视频画面出题，问题往往只能停留在“两者看起来像不像”，这又把模糊的裁量权推给了裁判。</p>
+      <p data-l="zh" lang="zh-CN">单凭实机画面，你能看出角色挥出了一拳，但很难看出这一拳是在“第 4 帧”才开始产生攻击判定的。如果仅依赖实机画面出题，问题往往只能停留在“两者看起来像不像”，这又把模糊的裁量权推给了裁判。</p>
       <p data-l="zh" lang="zh-CN"><b>社区维护的游戏 Wiki 恰好填补了这一空白。</b>以《街头霸王6》为例，SuperCombo Wiki [<a href="#ref-3">3</a>] 详尽记录了每一招的发生帧（Startup）、持续帧（Active）、硬直/恢复帧（Recovery）以及伤害与眩晕值。由于原版游戏的训练模式会在屏幕上实时显示发生帧、总帧数和伤害数值，裁判模型可以直接在两段录像中交叉比对画面动作与帧数槽（Frame Meter）读数。</p>
 
       <div class="figure">
@@ -325,8 +325,8 @@
           <p><b><span data-l="en">Judge.</span><span data-l="zh" lang="zh-CN">裁判理由：</span></b> <span data-part="reason" lang="en"></span></p>
         </div>
         <figcaption>
-          <span data-l="en"><b>Figure 5.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink; the agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 5.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳；而智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
+          <span data-l="en"><b>Figure 5.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink. The agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 5.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳。智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
         </figcaption>
       </figure>
     </section>
@@ -334,21 +334,21 @@
     <section class="sec" id="held-out">
       <h2 data-l="en">Held-Out Trajectories</h2>
       <h2 data-l="zh" lang="zh-CN">隐藏测试集：防止“面向录像编程”</h2>
-      <p data-l="en">An agent with access to evaluation videos could overfit—or even hardcode animations—to match specific recordings rather than implementing generalizable game logic.</p>
+      <p data-l="en">An agent with access to the evaluation recordings could overfit (or even hardcode animations) to match those recordings rather than implementing generalizable game logic.</p>
       <p data-l="en">To test whether agents truly capture underlying mechanics, we evaluate on held-out input trajectories. These sessions share the same game and starting states, but execute input sequences the agent never sees during development. In Celeste (Chapter 1), for instance, the agent is given 9 recordings to build the game, while the remaining 23 held-out recordings are reserved strictly for evaluation.</p>
-      <p data-l="zh" lang="zh-CN">如果智能体在开发阶段看得到测试录像，它就可能针对特定视频过拟合（甚至直接硬编码动画时间轴），而不是去实现真正通用的底层游戏逻辑。</p>
+      <p data-l="zh" lang="zh-CN">如果智能体在开发阶段看得到测试录像，它就可能针对这些录像过拟合（甚至直接硬编码动画时间轴），而不是去实现真正通用的底层游戏逻辑。</p>
       <p data-l="zh" lang="zh-CN">为了检验智能体是否真正掌握了游戏机制，我们引入了留出测试集（Held-out Trajectories）。这些测试沿用相同的游戏与初始状态，但输入序列是智能体在开发阶段从未见过的。以《蔚蓝》（Celeste）第一章为例，智能体仅能获得 32 段录像中的 9 段用于构建游戏，其余 23 段留出录像仅用于最终评分。</p>
     </section>
 
     <section class="sec" id="results">
       <h2 data-l="en">What We See</h2>
       <h2 data-l="zh" lang="zh-CN">核心实验发现</h2>
-      <p data-l="en">Frontier agents still struggle to pass even half of our rubric questions—and performance drops sharply on unseen trajectories.</p>
+      <p data-l="en">Frontier agents still struggle to pass even half of our rubric questions, and pass rates drop sharply on unseen trajectories.</p>
       <ul class="findings" data-l="en">
         <li><b>Generalization gaps:</b> On Celeste, accuracy falls from 46% on given trajectories to 30% on held-out test trajectories, showing that matching reference clips is far easier than synthesizing generalizable platforming physics.</li>
         <li><b>Procedural rendering vs. generated 3D assets:</b> When an agent renders visuals purely via procedural code (as in Celeste), nearly every visual check fails (7% pass rate). Conversely, in Street Fighter 6, where the agent used Tripo to generate 3D fighter meshes, visual fidelity (46%) roughly keeps pace with gameplay accuracy (46%).</li>
       </ul>
-      <p data-l="zh" lang="zh-CN">目前，前沿智能体在两款游戏上的总通过率均未过半；而在未见过的留出轨迹上，表现更是出现明显滑坡。</p>
+      <p data-l="zh" lang="zh-CN">目前，前沿智能体在两款游戏上的总通过率均未过半。在未见过的留出轨迹上，通过率更是明显下滑。</p>
       <ul class="findings" data-l="zh" lang="zh-CN">
         <li><b>显著的泛化差距：</b>在《蔚蓝》任务中，复刻版在可见录像上的通过率为 46%，但在未见过的留出测试集上跌至 30%。这表明，照着参考视频“对画面”远比编写一套可泛化的平台跳跃物理引擎容易得多。</li>
         <li><b>纯代码手绘 vs. 3D 资产生成：</b>当智能体完全依赖纯代码绘制所有画面时（如《蔚蓝》），视觉题几乎全军覆没（通过率仅 7%）。相比之下，在《街头霸王6》中，智能体调用了 Tripo 生成 3D 角色模型，其视觉题通过率（46%）与玩法机制题（46%）基本持平。</li>
@@ -388,10 +388,10 @@
     <section class="sec" id="judge">
       <h2 data-l="en">Can We Trust the Judge?</h2>
       <h2 data-l="zh" lang="zh-CN">裁判模型可信吗？</h2>
-      <p data-l="en">Rather than issuing holistic scores, our judge answers narrow, verifiable questions backed by explicit visual evidence—and is permitted to abstain (unknown) whenever the recordings do not conclusively settle a question. Every verdict logs both a natural-language rationale and the exact frames inspected, making audits straightforward.</p>
+      <p data-l="en">Our judge answers narrow, verifiable questions backed by explicit visual evidence, and does not issue holistic scores. It is permitted to abstain (unknown) whenever the evidence does not conclusively settle a question. Every verdict logs both a natural-language rationale and the exact frames inspected, making audits straightforward.</p>
       <p data-l="en">Against 245 human-annotated labels, our automated judge achieves 70.2% exact agreement across all three classes (pass, fail, unknown), rising to 84.3% agreement on non-abstaining verdicts.</p>
-      <p data-l="zh" lang="zh-CN">我们的裁判模型不做笼统的印象打分，而是依据摆在面前的视觉证据回答高度聚焦的窄域问题；当录像画面不足以支撑确切结论时，允许裁判选择弃权（判定为 unknown）。每一条裁决都会完整记录判定理由及所依据的关键帧截图，方便研究人员随时溯源核查。</p>
-      <p data-l="zh" lang="zh-CN">在与 245 条人工标注结果的比对中，自动裁判在三分类（通过 / 失败 / 未知）上的严格一致率达到 70.2%；在裁判未弃权的样本上，人机一致率高达 84.3%。</p>
+      <p data-l="zh" lang="zh-CN">我们的裁判模型依据摆在面前的视觉证据回答高度聚焦的窄域问题，不做笼统的印象打分。证据不足以支撑确切结论，就允许裁判选择弃权（判定为 unknown）。每一条裁决都会完整记录判定理由及所依据的关键帧截图，方便研究人员随时溯源核查。</p>
+      <p data-l="zh" lang="zh-CN">在与 245 条人工标注结果的比对中，自动裁判在三分类（通过 / 失败 / 未知）上的严格一致率达到 70.2%；在裁判未弃权的样本上，一致率高达 84.3%。</p>
 
       <!-- Counts from the team's comparison of human labels with the judge (245 paired labels). -->
       <figure class="figure" id="fig-8">
