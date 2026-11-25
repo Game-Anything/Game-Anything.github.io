@@ -307,7 +307,7 @@
     }
   }
 
-  /* Figure 4: one visual question as the judge saw it */
+  /* Figure 5: one visual question as the judge saw it */
   for (const figure of $$("[data-pair]")) {
     const pair = (DATA.pairs || []).find((item) => item.key === figure.dataset.pair);
     if (!pair) continue;

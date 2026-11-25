@@ -133,8 +133,8 @@
           <span data-l="zh" lang="zh-CN">点击时间轴上的标记，跳到对应时刻并查看裁判的理由。</span>
         </p>
         <figcaption>
-          <span data-l="en"><b>Figure 2.</b> Street Fighter 6, original (left) and an agent’s recreation (right) driven side by side using identical keystrokes. Each marker along the timeline represents the judge’s verdict on a specific rubric question at that exact timestamp.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 2.</b> 《街头霸王6》原版（左）与智能体复刻版（右）在相同按键输入下的并排运行对比。底部时间轴上的每个标记，代表裁判模型在对应时间点对一道具体评分题目的裁决结果。</span>
+          <span data-l="en"><b>Figure 2.</b> Street Fighter 6, original (left) and an agent’s recreation (right) driven side by side using identical keystrokes.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 2.</b> 《街头霸王6》原版（左）与智能体复刻版（右）在相同按键输入下的并排运行对比。</span>
         </figcaption>
       </figure>
       <details class="allq">
@@ -151,10 +151,26 @@
       <h2 data-l="zh" lang="zh-CN">为什么要做“游戏复刻”？</h2>
       <p data-l="en">Benchmarks for automated game development are emerging rapidly [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]. Most follow an open-ended setup: give an agent a text prompt, then ask a language model to grade the resulting game. Because an open-ended prompt admits countless valid designs, there is no ground truth—leaving the evaluation reliant on a judge’s subjective notion of what makes a game “good.”</p>
       <p data-l="en">Recreation anchors evaluation in ground truth. When an agent rebuilds an existing game, the original title serves as the answer key. We play the original game once, log every controller input alongside the video, and replay that exact input sequence on the agent’s recreation. Rather than scoring abstract quality, the judge simply verifies whether the same actions produce the same outcomes at the exact same moments.</p>
-      <p data-l="en">Recreation also measures a capability that open-ended generation overlooks: reverse-engineering mechanics from pixels. To rebuild a game from footage, an agent must infer underlying rules directly from the screen—how far a dash travels, how many frames a jab takes, or how hitstop feels on impact. Frontier vision–language models remain notoriously weak at this kind of situated visual understanding [<a href="#ref-5">5</a>].</p>
+      <p data-l="en">Recreation also measures a capability that open-ended generation overlooks: reverse-engineering mechanics from pixels. To rebuild a game from footage, an agent must infer underlying rules directly from the screen—how far a dash travels, how many frames a jab takes, or how hitstop feels on impact. Frontier vision–language models remain notoriously weak at this kind of situated visual understanding (Figure 3).</p>
       <p data-l="zh" lang="zh-CN">面向游戏开发的 AI 评测基准正在快速涌现 [<a href="#ref-1">1</a>, <a href="#ref-2">2</a>]。目前主流的做法通常是开放式生成：给智能体一段文本提示词（Prompt），再让大语言模型去给生成的游戏打分。然而，一句提示词可以对应无数种合理的游戏设计——由于缺乏客观真值（Ground Truth），最终得分往往完全取决于裁判模型对“什么是好游戏”的主观偏好。</p>
       <p data-l="zh" lang="zh-CN"><b>“复刻”让评测第一次有了客观的标准答案。</b>当智能体重建一款现有游戏时，原版游戏就是天然的参考系。我们将人类游玩原版游戏时的每一次按键操作连同画面一并录制下来，随后在智能体构建的复刻游戏中，从相同的初始状态回放完全一致的按键序列。此时，裁判不再需要评判抽象的“好玩程度”，只需核验：在同一时刻、相同输入下，两边是否发生了完全相同的事。</p>
-      <p data-l="zh" lang="zh-CN">此外，游戏复刻还考察了一项开放式生成无法触及的核心能力：从像素中逆向工程游戏机制。要想仅凭实机录像重建一款游戏，智能体必须直接从画面中读懂底层规则——冲刺一次移动多远、挥出一拳需要多少帧、命中时的受击反馈长什么样。而当前前沿的视觉-语言模型（VLM），恰恰在这种情境化的动态视觉理解上表现薄弱 [<a href="#ref-5">5</a>]。</p>
+      <p data-l="zh" lang="zh-CN">此外，游戏复刻还考察了一项开放式生成无法触及的核心能力：从像素中逆向工程游戏机制。要想仅凭实机录像重建一款游戏，智能体必须直接从画面中读懂底层规则——冲刺一次移动多远、挥出一拳需要多少帧、命中时的受击反馈长什么样。而当前前沿的视觉-语言模型（VLM），恰恰在这种情境化的动态视觉理解上表现薄弱（图 3）。</p>
+
+      <!-- A mechanic read wrongly from footage: Celeste checkpoint 2, one of the recordings the builder was given,
+           from 6.0 to 9.7 s. The judge failed "Dash distance" on this replay. -->
+      <figure class="figure" id="fig-3">
+        <div class="sbs">
+          <div class="sbs__labels" aria-hidden="true"><span><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></span><span><span data-l="en">Recreation</span><span data-l="zh" lang="zh-CN">复刻版</span></span></div>
+          <video poster="media/celeste-dash.webp" data-stack-poster="media/celeste-dash-stack.webp" width="1708" height="480" muted loop playsinline controls preload="none" data-autoplay aria-label="Celeste under the same inputs: the original’s dash reaches the pillar, the recreation’s falls short">
+            <source src="media/celeste-dash-stack.mp4" type="video/mp4" media="(max-width: 760px)">
+            <source src="media/celeste-dash.mp4" type="video/mp4">
+          </video>
+        </div>
+        <figcaption>
+          <span data-l="en"><b>Figure 3.</b> Celeste, under the same inputs: the original’s dash reaches the pillar, while the recreation’s falls short. The agent was given this very recording.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 3.</b> 《蔚蓝》，相同输入下：原版的冲刺够到了柱子，复刻版的冲刺却差了一截。这段录像正是智能体拿到的开发素材之一。</span>
+        </figcaption>
+      </figure>
     </section>
 
     <section class="sec" id="how">
@@ -196,11 +212,11 @@
         </tbody>
       </table>
       <p data-l="en">Our Street Fighter 6 benchmark centers on a Ryu vs. Ken matchup in Training Mode. A human player recorded 23 short sessions spanning basic movement, normals, special moves, the Drive system, Super Arts, and combos. Each session begins from a named training preset; the agent’s recreation must expose matching states so every replay starts from identical initial conditions.</p>
-      <p data-l="en">Tasks can also be sourced from public gameplay footage with on-screen input overlays. Our Grand Theft Auto V and Cyberpunk 2077 tasks, for example, are curated directly from such videos in the NitroGen dataset [<a href="#ref-6">6</a>].</p>
+      <p data-l="en">The environment can scale well beyond our own recordings. Every task starts from gameplay footage and the inputs behind it, and the NitroGen dataset [<a href="#ref-5">5</a>] provides exactly that at scale: gamepad inputs read from on-screen input overlays for 40,000 hours of public gameplay video, across more than 1,000 games.</p>
       <p data-l="zh" lang="zh-CN">我们的《街头霸王6》任务聚焦于训练模式下的“隆（Ryu）对战肯（Ken）”。一名玩家录制了 23 段短流程实机操作，涵盖基础移动、通常技、必杀技、斗气系统（Drive System）、超必杀技（Super Arts）以及连段。每段录像均从指定的训练模式预设状态开始；智能体的复刻版必须提供对应的初始状态接口，以确保每次回放都在同一起跑线上进行。</p>
-      <p data-l="zh" lang="zh-CN">评测任务同样可以从带有屏幕按键显示的公开实机视频中提取。例如，我们的《侠盗猎车手5》（GTA V）和《赛博朋克2077》任务，便直接切片自 NitroGen 数据集 [<a href="#ref-6">6</a>] 中的此类公开录像。</p>
+      <p data-l="zh" lang="zh-CN">这套环境的规模可以远超我们自己录制的内容。每个任务的起点都是实机画面加上对应的按键输入，而 NitroGen 数据集 [<a href="#ref-5">5</a>] 正好大规模地提供了这两样：它从屏幕上的按键显示（Input Overlay）中读出手柄输入，覆盖 1,000 多款游戏、共 40,000 小时的公开实机视频。</p>
 
-      <figure class="figure" id="fig-3">
+      <figure class="figure" id="fig-4">
         <div class="grid4">
           <figure class="clip">
             <h3><span data-l="en">Street Fighter 6 · movement</span><span data-l="zh" lang="zh-CN">《街头霸王6》· 基础移动</span></h3>
@@ -244,8 +260,8 @@
           </figure>
         </div>
         <figcaption>
-          <span data-l="en"><b>Figure 3.</b> Four evaluation sessions showing the original game and the agent’s recreation running side by side under identical inputs.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 3.</b> 四组测试片段中，原版游戏与智能体复刻版在相同输入下的并排运行画面。</span>
+          <span data-l="en"><b>Figure 4.</b> Four evaluation sessions showing the original game and the agent’s recreation running side by side under identical inputs.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 4.</b> 四组测试片段中，原版游戏与智能体复刻版在相同输入下的并排运行画面。</span>
         </figcaption>
       </figure>
     </section>
@@ -287,21 +303,18 @@
 
       <p data-l="en">We construct rubrics through a three-stage human-in-the-loop pipeline:</p>
       <ol class="steps" data-l="en">
-        <li><b>Drafting:</b> Given relevant wiki pages, an LLM watches each reference recording and drafts timestamped questions. For Street Fighter 6, it logs every move alongside its timestamp and HUD readout.</li>
-        <li><b>Grounding:</b> A programmatic script injects canonical frame data from the wiki, generating paired questions for each move—one testing gameplay mechanics (what it does) and one testing visual fidelity (how it looks).</li>
-        <li><b>Human Curation:</b> A human reviewer audits all items and adds baseline checks shared across sessions (stage geometry, character models, HUD elements, and basic locomotion). In total, 272 of the 353 Street Fighter 6 questions cite ground-truth wiki specifications.</li>
+        <li><b>Input:</b> We prepare public gameplay videos and the related wiki pages as input.</li>
+        <li><b>Rubric:</b> We feed the input to a rubric agent, which generates two kinds of questions: gameplay mechanics (what it does) and visual fidelity (how it looks).</li>
+        <li><b>Human validation:</b> A human reviewer validates every question. In total, 272 of the 353 Street Fighter 6 questions cite ground-truth wiki specifications.</li>
       </ol>
       <p data-l="zh" lang="zh-CN">我们的评分准则（Rubrics）通过三步流程构建：</p>
       <ol class="steps" data-l="zh" lang="zh-CN">
-        <li><b>模型初稿：</b>向大语言模型提供游戏的 Wiki 页面，让其观看每段原版录像并起草带时间戳的问题。在《街头霸王6》中，模型会列出每次出招的时间点及屏幕帧数槽读数。</li>
-        <li><b>注入真值：</b>自动化脚本将 Wiki 中的官方帧数数据注入条目，并为每个招式成对生成两道题——一道考察玩法机制（招式效果与数值），一道考察视觉还原（动作外观表现）。</li>
-        <li><b>人工精校：</b>人工审核员逐一校验题目，并补充所有录像通用的基础检查项（场景舞台、角色外观、HUD 界面及基础移动）。在《街头霸王6》的全部 353 道评测题中，有 272 道直接引用了 Wiki 的客观数据。</li>
+        <li><b>输入：</b>我们准备公开的实机游玩视频和相关的 Wiki 页面作为输入。</li>
+        <li><b>生成准则：</b>我们把这些输入交给一个评分准则智能体（Rubric Agent），由它生成两类题目：玩法机制（招式效果与数值）与视觉还原（动作外观表现）。</li>
+        <li><b>人工校验：</b>人工审核员逐一校验题目。在《街头霸王6》的全部 353 道评测题中，有 272 道直接引用了 Wiki 的客观数据。</li>
       </ol>
 
-      <p data-l="en"><b>Accounting for timing offsets.</b> Gameplay questions are evaluated over multi-frame sequences sampled from both recordings. Visual questions inspect specific timestamps: the reference frame at timestamp <i>t</i>, the corresponding candidate frame under the same input sequence, and the canonical move illustration from the wiki. Because Street Fighter 6 exhibits roughly five frames of input-to-animation latency whereas web recreations typically respond instantaneously, we also provide the judge with candidate frames from three and six game frames prior (<i>t</i>&#8202;−&#8202;3F and <i>t</i>&#8202;−&#8202;6F).</p>
-      <p data-l="zh" lang="zh-CN"><b>消除输入响应延迟偏差。</b>玩法机制题基于从两段录像中采样的多帧序列进行作答；视觉还原题则基于固定时间点的关键帧进行比对：包括问题指定时刻 <i>t</i> 的原版画面、相同输入序列同一时刻的复刻版画面，以及 Wiki 中该招式的标准示意图。由于《街头霸王6》从按下按键到画面出招存在约 5 帧的输入延迟，而网页复刻版通常是零延迟即时响应，我们还会额外向裁判提供复刻版提前 3 帧与提前 6 帧（<i>t</i>&#8202;−&#8202;3F 与 <i>t</i>&#8202;−&#8202;6F）的画面，以消除时序偏移带来的误判。</p>
-
-      <figure class="figure evidence" id="fig-4" data-pair="move_hphk_block_look">
+      <figure class="figure evidence" id="fig-5" data-pair="move_hphk_block_look">
         <div class="evidence__row">
           <figure class="shot"><img src="media/pairs/ref_move_hphk_block_look_9.50s.webp" data-part="reference" alt="Original game: Ryu lunges into Ken with a punch, trailing ink strokes" loading="lazy" decoding="async" width="800" height="450"><figcaption data-part="reference-label"><span data-l="en">Original</span><span data-l="zh" lang="zh-CN">原版</span></figcaption></figure>
           <figure class="shot shot--wiki"><img src="media/pairs/wiki_SF6_Ryu_hphk.webp" data-part="wiki" alt="Wiki image of the move: a lunging punch trailing ink" loading="lazy" decoding="async" width="536" height="360"><figcaption><span data-l="en">Wiki</span><span data-l="zh" lang="zh-CN">Wiki 图鉴</span></figcaption></figure>
@@ -312,8 +325,8 @@
           <p><b><span data-l="en">Judge.</span><span data-l="zh" lang="zh-CN">裁判理由：</span></b> <span data-part="reason" lang="en"></span></p>
         </div>
         <figcaption>
-          <span data-l="en"><b>Figure 4.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink; the agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
-          <span data-l="zh" lang="zh-CN"><b>图 4.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳；而智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
+          <span data-l="en"><b>Figure 5.</b> Evidence presented to the judge on a single visual question: Ryu’s Shingeki (Drive Impact, HP+HK), blocked by Ken in the corner. Both the original game and the wiki show a lunging punch trailing black ink; the agent’s recreation throws a kick instead. The judge marks the item as failed and cites the mismatch.</span>
+          <span data-l="zh" lang="zh-CN"><b>图 5.</b> 单道视觉题呈递给裁判模型的证据视图：隆在版边使出 Drive Impact“进击”（Shingeki，HP+HK）被肯防御。原版画面与 Wiki 图鉴均显示为带有泼墨特效的突进冲拳；而智能体的复刻版却踢出了一脚。裁判据此判定该题不通过（Fail），并给出具体理由。</span>
         </figcaption>
       </figure>
     </section>
@@ -343,7 +356,7 @@
 
       <!-- Each bar's label is its text; data-rate names the pass rate in assets/data.js. -->
       <div class="figs-2">
-        <figure class="figure" id="fig-5">
+        <figure class="figure" id="fig-6">
           <div class="bars">
             <p class="bar" data-rate="results.sf6.sides.0.rate"><span data-l="en">Gameplay</span><span data-l="zh" lang="zh-CN">玩法机制</span></p>
             <p class="bar" data-rate="results.sf6.sides.1.rate"><span data-l="en">Visual</span><span data-l="zh" lang="zh-CN">视觉还原</span></p>
@@ -351,11 +364,11 @@
             <p class="bar" data-rate="results.sf6.sources.1.rate"><span data-l="en">Other</span><span data-l="zh" lang="zh-CN">其他基础题</span></p>
           </div>
           <figcaption>
-            <span data-l="en"><b>Figure 5.</b> Street Fighter 6 recreation built by Codex (GPT-6 Astra), evaluated by Claude Opus 5.5 across 23 sessions (Nov 7, 2026), using an earlier 611-question version of the rubric.</span>
-            <span data-l="zh" lang="zh-CN"><b>图 5.</b> 《街头霸王6》复刻评测结果（由基于 GPT-6 Astra 的 Codex 构建，Claude Opus 5.5 基于 23 段录像于 11月7日 裁决；当时使用的是早期 611 题版本的评分准则）。</span>
+            <span data-l="en"><b>Figure 6.</b> Street Fighter 6 recreation built by Codex (GPT-6 Astra), evaluated by Claude Opus 5.5 across 23 sessions (Nov 7, 2026), using an earlier 611-question version of the rubric.</span>
+            <span data-l="zh" lang="zh-CN"><b>图 6.</b> 《街头霸王6》复刻评测结果（由基于 GPT-6 Astra 的 Codex 构建，Claude Opus 5.5 基于 23 段录像于 11月7日 裁决；当时使用的是早期 611 题版本的评分准则）。</span>
           </figcaption>
         </figure>
-        <figure class="figure" id="fig-6">
+        <figure class="figure" id="fig-7">
           <div class="bars">
             <p class="bar" data-rate="results.celeste.0.rate"><span data-l="en">Given (9 sessions)</span><span data-l="zh" lang="zh-CN">可见集（9 段）</span></p>
             <p class="bar" data-rate="results.celeste.1.rate"><span data-l="en">Held-out (23 sessions)</span><span data-l="zh" lang="zh-CN">留出测试集（23 段）</span></p>
@@ -363,8 +376,8 @@
             <p class="bar" data-rate="results.celesteSides.1.rate"><span data-l="en">Visual</span><span data-l="zh" lang="zh-CN">视觉还原</span></p>
           </div>
           <figcaption>
-            <span data-l="en"><b>Figure 6.</b> Celeste (Chapter 1) recreation built by Codex, evaluated by GPT-6 Astra across 32 sessions.</span>
-            <span data-l="zh" lang="zh-CN"><b>图 6.</b> 《蔚蓝》（第一章）复刻评测结果（由 Codex 构建，GPT-6 Astra 基于 32 段录像裁决）。</span>
+            <span data-l="en"><b>Figure 7.</b> Celeste (Chapter 1) recreation built by Codex, evaluated by GPT-6 Astra across 32 sessions.</span>
+            <span data-l="zh" lang="zh-CN"><b>图 7.</b> 《蔚蓝》（第一章）复刻评测结果（由 Codex 构建，GPT-6 Astra 基于 32 段录像裁决）。</span>
           </figcaption>
         </figure>
       </div>
@@ -381,7 +394,7 @@
       <p data-l="zh" lang="zh-CN">在与 245 条人工标注结果的比对中，自动裁判在三分类（通过 / 失败 / 未知）上的严格一致率达到 70.2%；在裁判未弃权的样本上，人机一致率高达 84.3%。</p>
 
       <!-- Counts from the team's comparison of human labels with the judge (245 paired labels). -->
-      <figure class="figure" id="fig-7">
+      <figure class="figure" id="fig-8">
         <table class="cm" data-l="en">
           <thead><tr><th scope="col">Human label</th><th scope="col">Judge: pass</th><th scope="col">Judge: fail</th><th scope="col">Judge: unknown</th><th scope="col">Total</th></tr></thead>
           <tbody>
@@ -397,8 +410,8 @@
           </tbody>
         </table>
         <figcaption>
-          <span data-l="en"><b>Figure 7.</b> Confusion matrix of human labels against the judge’s verdicts (N = 245).</span>
-          <span data-l="zh" lang="zh-CN"><b>图 7.</b> 人工标注标签与自动裁判裁决结果的混淆矩阵对比（N = 245）。</span>
+          <span data-l="en"><b>Figure 8.</b> Confusion matrix of human labels against the judge’s verdicts (N = 245).</span>
+          <span data-l="zh" lang="zh-CN"><b>图 8.</b> 人工标注标签与自动裁判裁决结果的混淆矩阵对比（N = 245）。</span>
         </figcaption>
       </figure>
     </section>
@@ -420,8 +433,7 @@
         <li id="ref-2">Luo, T., Wang, R., Bi, J., et al. GameCraft-Bench: Can Agents Build Playable Games End-to-End in a Real Game Engine? 2026. <a href="https://arxiv.org/abs/2606.17861">arXiv:2606.17861</a></li>
         <li id="ref-3">SuperCombo Wiki, Street Fighter 6. <a href="https://wiki.supercombo.gg">wiki.supercombo.gg</a></li>
         <li id="ref-4">Celeste Wiki. <a href="https://celeste.ink/wiki">celeste.ink/wiki</a></li>
-        <li id="ref-5">Li, C., Han, R., Hsu, J., et al. SAW-Bench: Learning Situated Awareness in the Real World. 2026. <a href="https://arxiv.org/abs/2602.16682">arXiv:2602.16682</a></li>
-        <li id="ref-6">NVIDIA. NitroGen: gameplay videos with gamepad annotations. <a href="https://huggingface.co/datasets/nvidia/NitroGen">huggingface.co/datasets/nvidia/NitroGen</a></li>
+        <li id="ref-5">NVIDIA. NitroGen: gameplay videos with gamepad annotations. <a href="https://huggingface.co/datasets/nvidia/NitroGen">huggingface.co/datasets/nvidia/NitroGen</a></li>
       </ol>
     </section>
 

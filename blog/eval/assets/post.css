@@ -277,7 +277,7 @@ h2:lang(zh-CN) { letter-spacing: 0; }
 .findings li::marker { color: var(--text-3); }
 .steps b, .findings b, .sec > p b { font-weight: 600; }
 
-/* The pass-rate note reads as a caption to Figures 5 and 6, so it lines up with their left edge */
+/* The pass-rate note reads as a caption to Figures 6 and 7, so it lines up with their left edge */
 .sec > .note { max-width: var(--wide); margin-top: 16px; color: var(--text-3); font-size: 15px; line-height: 1.55; }
 
 /* Task / input / output */
@@ -369,7 +369,7 @@ h2:lang(zh-CN) { letter-spacing: 0; }
 .grid-video__labels li:first-child { background: #fff; color: var(--text); }
 
 /* Confusion matrix: the figure shrinks to the table, so its caption starts at the table's left edge */
-#fig-7 { width: fit-content; }
+#fig-8 { width: fit-content; }
 .cm { border-collapse: collapse; font-size: 15.5px; }
 .cm thead th { padding: 0 18px 10px; border-bottom: 1px solid var(--text); color: var(--text-3); font-size: 14px; font-weight: 500; text-align: center; vertical-align: bottom; }
 .cm thead th:first-child { text-align: left; padding-left: 0; }
