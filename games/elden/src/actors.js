@@ -1341,32 +1341,66 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
  phaseKneelPose(state){
   if(this.name!=='gilded_warlord'||state.phaseTime==null)return;
   const t=state.phaseTime;
-  const kneel=[[1.15,3.0,-.55,0,-1,-.02],[-1.2,1.35,-.35,-.92,-.25,-.2],.08,.72,.95];
-  const low=[[1.15,3.0,-.55,0,-1,-.02],[-1.2,1.35,-.35,-.92,-.25,-.2],.08,.84,.95];
-  const ready=[[1.25,2.3,-.3,.9,.4,-.05],[-1.25,2.3,-.3,-.9,.4,-.05],0,.08,.18];
-  // Above the gate both clipped points turn upward. The grip rolls are
-  // opposite in a frontal shot even though the two weapon meshes are identical.
-  const revealBlade=(x,y,z,dx,dy,dz)=>{
-   const axis=new T.Vector3(dx,dy,dz).normalize(),back=new T.Vector3(0,1,0);
-   back.addScaledVector(axis,-back.dot(axis)).normalize();
-   const flat=new T.Vector3().crossVectors(back,axis);
-   const roll=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(back,axis,flat));
-   return [x,y,z,dx,dy,dz,...roll.toArray()];
-  };
-  const reveal=[revealBlade(1.38,2.32,-.28,.82,.58,-.21),revealBlade(-1.35,2.34,-.31,-.82,.58,-.18),0,.08,.18];
-  // At the cut to the gate the screen-left tip settles lower and farther
-  // out. Keep the close-up transition and the two blade profiles intact.
-  const open=[revealBlade(1.52,1.86,.01,.87,.51,-.01),revealBlade(-1.49,1.85,-.02,-.84,.405,-.18),0,.08,.18];
-  this.sourceBladeTrack({...state,bossElapsed:t},[[0,...kneel],[12,...kneel],[24,...low],[47,...low],[57,...ready],[71,...ready],[74,...reveal],[74.90,...reveal],[76,...open],[86,...open]],0,1,true);
-  const lowered=1-T.MathUtils.smoothstep(t,47,57);
+  if(!this.cinematicBladeKeys){
+   const kneel=[[1.15,3.0,-.55,0,-1,-.02],[-1.2,1.35,-.35,-.92,-.25,-.2],.08,.72,.95];
+   const low=[[1.15,3.0,-.55,0,-1,-.02],[-1.2,1.35,-.35,-.92,-.25,-.2],.08,.84,.95];
+   const loweredSwords=[[1.54,1.68,-.22,.86,-.34,-.18],[-1.51,1.68,-.24,-.86,-.31,-.20],0,.09,.20];
+   const ready=[[1.25,2.3,-.3,.9,.4,-.05],[-1.25,2.3,-.3,-.9,.4,-.05],0,.08,.18];
+   // Above the gate both clipped points turn upward. The grip rolls are
+   // opposite in a frontal shot even though the two weapon meshes are identical.
+   const revealBlade=(x,y,z,dx,dy,dz)=>{
+    const axis=new T.Vector3(dx,dy,dz).normalize(),back=new T.Vector3(0,1,0);
+    back.addScaledVector(axis,-back.dot(axis)).normalize();
+    const flat=new T.Vector3().crossVectors(back,axis);
+    const roll=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(back,axis,flat));
+    return [x,y,z,dx,dy,dz,...roll.toArray()];
+   };
+   const reveal=[revealBlade(1.38,2.32,-.28,.82,.58,-.21),revealBlade(-1.35,2.34,-.31,-.82,.58,-.18),0,.08,.18];
+   // At the cut to the gate the screen-left tip settles lower and farther
+   // out. Keep the close-up transition and the two blade profiles intact.
+   const open=[revealBlade(1.52,1.86,.01,.87,.51,-.01),revealBlade(-1.49,1.85,-.02,-.84,.405,-.18),0,.08,.18];
+   this.cinematicBladeKeys=[[0,...kneel],[12.63,...kneel],[19.38,...low],[46.3,...low],[52.4,...loweredSwords],[58.8,...loweredSwords],[63,...ready],[70,...ready],[72.58,...reveal],[74.55,...open],[84,...open]];
+  }
+  this.sourceBladeTrack({...state,bossElapsed:t},this.cinematicBladeKeys,0,1,true);
+  const lowered=1-T.MathUtils.smoothstep(t,46.3,53.9);
   this.visual.position.y-=.85*lowered;this.root.updateMatrixWorld(true);
   const world=(x,y,z)=>new T.Vector3(x,y+(state.groundOffset||0),z).applyAxisAngle(new T.Vector3(0,1,0),state.yaw||0).add(state.pos);
   for(const side of ['Right','Left']){
    const sign=side==='Right'?1:-1,foot=world(sign*.65,this.footClearance||.15,side==='Right'?.55:-1.1),pole=world(sign*.75,side==='Right'?.45:1.6,-1.1);
    this.poseLimb(side,['UpLeg','Leg','Foot'],foot,pole,lowered);
   }
-  const head=Object.values(this.bones).find(b=>/Head$/.test(b.name));
-  if(head){this.combatAdjustments.push({bone:head,rotation:head.quaternion.clone()});head.rotateX(-.35*(1-T.MathUtils.smoothstep(t,47,57)));}
+  // Pitch around the world-space shoulder line. This rig's head has a
+  // rotated bind frame, so a local X nod turns the visor sideways instead.
+  const bow=1-T.MathUtils.smootherstep(t,19.42,23.24);
+  const chestBow=1-T.MathUtils.smootherstep(t,19.83,25.46);
+  const up=(1-bow)*(1-T.MathUtils.smoothstep(t,26.4,30));
+  const closeLift=t>=1163/60&&t<1582/60;
+  for(const [suffix,angle] of [['Spine2',.20*lowered+(closeLift?.24:.32)*chestBow-.10*up],['Head',.13*lowered+(closeLift?.58:1.04)*bow-.44*up]]){
+   const joint=findRigBone(this.bones,suffix);if(!joint)continue;
+   const axis=new T.Vector3(1,0,0).applyQuaternion(joint.parent.getWorldQuaternion(new T.Quaternion()).invert());
+   this.combatAdjustments.push({bone:joint,rotation:joint.quaternion.clone()});
+   joint.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(axis,angle));
+   joint.updateWorldMatrix(true,true);
+  }
+  // Brace against the vertical sword after ground placement. The raised
+  // hand stays above the bowed brow; the other arm bears weight beside the knee.
+  if(lowered>.001){
+   const visor=this.root.getObjectByName('radahn-portrait-focus');
+   if(visor){
+    const brow=visor.getWorldPosition(new T.Vector3());
+    for(const side of ['Right','Left']){
+     const held=this.hand(side),q=held.getWorldQuaternion(new T.Quaternion());
+     const right=side==='Right',sign=right?-1:1;
+     const target=brow.clone().add(new T.Vector3(sign*(right?1.45:1.78),right?.99:-.98,-.17));
+     const pole=brow.clone().add(new T.Vector3(sign*1.99,right?.17:-.34,-.74));
+     this.poseHand(side,target,pole,lowered);
+     this.combatAdjustments.push({bone:held,rotation:held.quaternion.clone()});
+     held.quaternion.copy(held.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));
+    }
+    this.root.updateMatrixWorld(true);
+   }
+  }
+
  }
 
  sourceRockRipPose(state){
@@ -1382,8 +1416,8 @@ const copies=new Map(group.ghostPairs.map(pair=>[pair.source,pair.copy]));
    [1.42,[.85,2.55,-1.05,.4,-.72,-.65],[-.7,2.38,-1.10,-.4,-.72,-.65],.28,.42,.63],
    [1.65,[1.05,1.18,-.9,.4,-.34,-.85],[-1.05,1.18,-.9,-.4,-.34,-.85],.12,.64,.72],
    [2.05,[1.05,1.10,-.2,.65,-.30,-.7],[-1.05,1.10,-.2,-.65,-.30,-.7],-.12,.60,.75],
-   [2.26,[1.0,1.65,-.75,.55,.15,-.82],[-1.0,1.65,-.75,-.55,.15,-.82],-.20,.40,.55],
-   [2.52,[1.1,3.0,-.40,.45,.88,-.2],[-1.1,3.0,-.40,-.45,.88,-.2],-.10,.16,.32],
+   [2.26,[1.12,1.34,-.48,.54,-.19,-.82],[-1.15,1.17,-.34,-.55,-.28,-.78],-.24,.53,.64],
+   [2.52,[1.21,2.62,-.40,.49,.66,-.39],[-1.20,1.88,-.42,-.53,.10,-.76],-.16,.33,.47],
    [2.85,[1.40,3.30,-.20,.7,.7,-.04],[-1.40,3.30,-.20,-.7,.7,-.04],0,.04,.28],
    [4.5,[1.50,2.75,-.25,.9,.4,-.06],[-1.50,2.75,-.25,-.9,.4,-.06],0,.06,.30],
    [5.65,[1.1,3.2,-.2,.4,.9,-.1],[-1.1,3.2,-.2,-.4,.9,-.1],0,.05,.3],

@@ -8,7 +8,8 @@ import {fitLowerRobe,ivoryLinen,dressShoulders} from "game/src/companion-robe.js
 function cheekRelief(y,z) {
   const center=z+.006;
   const bump=(dy,dz)=>Math.exp(-dy*dy-dz*dz);
-  return .006*bump((y+.016)/.060,(Math.abs(center)-.075)/.052)
+  return .009*bump((y+.016)/.060,(Math.abs(center)-.075)/.052)
+    -.007*bump((y-.074)/.016,(Math.abs(center)-.076)/.045)
     +.017*bump((y-.021)/.076,center/.024)
     +.009*bump((y+.004)/.019,center/.035)
     +.002*bump((y+.060)/.018,center/.038)
@@ -248,7 +249,7 @@ export function prepareCompanion(model,portrait,collarMaps,complexionMap) {
   const seatedPose=portraitPose.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(-.24,-.53,.10,'YXZ')));
   seatedPose.premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),.90));
   seatedPose.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),.085));
-  const seatedEye=eye.clone().addScaledVector(axisX,-.11).addScaledVector(axisY,.145).addScaledVector(axisZ,-.13);
+  const seatedEye=eye.clone().addScaledVector(axisX,-.08).addScaledVector(axisY,.085).addScaledVector(axisZ,-.105);
   mount.updateMatrix();carrier.userData.portraitFrame=mount.matrix;
   const head=portrait.getObjectByProperty('isMesh',true);
   head.name='Miquella_portrait';
@@ -286,7 +287,7 @@ export function prepareCompanion(model,portrait,collarMaps,complexionMap) {
       float lidHeight=mix(.082,.067,rightLid)+.007*along*along;
       float lash=facialSkin*(1.-smoothstep(.53,1.,abs(along)))*
         (1.-smoothstep(.003,.012,abs(faceYZ.x-lidHeight)));
-      diffuseColor.rgb*=mix(vec3(1.),vec3(.94,.91,.87),lash);`);
+      diffuseColor.rgb*=mix(vec3(1.),vec3(.78,.71,.66),lash);`);
     shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>',`#include <metalnessmap_fragment>
       metalnessFactor*=1.-facialSkin;`);
     shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
@@ -313,7 +314,11 @@ export function prepareCompanion(model,portrait,collarMaps,complexionMap) {
       float cheekKey=smoothstep(-.34,.73,dot(cheekNormal,normalize(vec3(.74,.38,-.56))));
       vec3 cheekLight=skinTint*modulation*((.055+.115*skyWrap)+cheekKey*(.083+.078*cheek)*vec3(1.06,.92,.81));
       outgoingLight+=cheekLight*facialSkin*(1.-portraitFill);
-      outgoingLight=mix(outgoingLight,paleSkin,portraitFill*facialSkin);
+      // Retain the directional socket, nose and mouth relief when the
+      // gateway lights the face. A full replacement erased its expression.
+      float shapedSkin=softSkin/(1.+.45*softSkin);
+      vec3 warmSkin=gateTint*(.43+.82*shapedSkin)*(.84+.16*cheekKey);
+      outgoingLight=mix(outgoingLight,mix(warmSkin,paleSkin,.40),.86*portraitFill*facialSkin);
       outgoingLight+=portraitFill*crownGold*vec3(.080,.069,.042)*skyWrap;
       #include <opaque_fragment>`);
   };
@@ -327,15 +332,71 @@ export function prepareCompanion(model,portrait,collarMaps,complexionMap) {
   const ridingNeck=neck.clone().applyQuaternion(seatedPose).add(seatedEye);
   const shoulders=dressShoulders(carrier,surface,collarMaps,restingNeck,ridingNeck);
   shoulders.morphTargetInfluences[0]=1;
+  // Continue the actual lower edge of the shoulder garment down the front
+  // while the rider descends. Its folds gather behind the cuirass on contact.
+  const hem=shoulders.geometry.attributes.position,rows=18,around=128;
+  const lastRing=hem.count-around-1,waist=new T.Vector3(),point=new T.Vector3();
+  for(let i=0;i<around;i++)waist.add(point.fromBufferAttribute(hem,lastRing+i));
+  waist.multiplyScalar(1/around);
+  // The original fitted torso is folded forward to ride on the carrier.
+  // Under the gate, the waist hangs below the face before swinging onto his back.
+  const straighten=new T.Vector3(brow.position.x+.07-waist.x,0,brow.position.z-.14-waist.z);
+  const upright=hem.clone();
+  for(let i=0;i<hem.count;i++){
+    const row=Math.floor(i/(around+1))/(lastRing/(around+1));
+    point.fromBufferAttribute(hem,i).addScaledVector(straighten,T.MathUtils.smootherstep(row,.24,1));
+    upright.setXYZ(i,point.x,point.y,point.z);
+  }
+  const arrivalShape=shoulders.geometry.clone();arrivalShape.setAttribute('position',upright);arrivalShape.computeVertexNormals();
+  shoulders.geometry.morphAttributes.position.push(upright);
+  shoulders.geometry.morphAttributes.normal.push(arrivalShape.attributes.normal);
+  shoulders.updateMorphTargets();shoulders.morphTargetInfluences[0]=1;
+  const pos=[],uv=[],indices=[];
+  for(let j=0;j<=rows;j++){
+    const t=j/rows;
+    for(let i=0;i<=around;i++){
+      const v=new T.Vector3().fromBufferAttribute(upright,lastRing+i);
+      const a=i/around*Math.PI*2,pleat=Math.sin(a*15+t*.9);
+      const gather=Math.sin(Math.PI*t),fold=Math.sin(7*a+t*3.2+.5*Math.sin(3*a));
+      v.x+=(t*(.14+.045*pleat)+.043*gather*fold)*Math.sin(a)+t*t*.073;
+      v.y-=1.49*t;
+      v.z-=t*(.11+.14*Math.cos(a)+.047*pleat)+.038*gather*fold*Math.cos(a);
+      pos.push(v.x,v.y,v.z);uv.push(i/around,1-t);
+      if(j<rows&&i<around){const k=j*(around+1)+i;indices.push(k,k+1,k+around+1,k+1,k+around+2,k+around+1);}
+    }
+  }
+  const panel=new T.BufferGeometry();
+  panel.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+  panel.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+  panel.setIndex(indices);panel.computeVertexNormals();
+  const arrivalCloth=cloth.clone();arrivalCloth.onBeforeCompile=cloth.onBeforeCompile;
+  const frontDrape=new T.Mesh(panel,arrivalCloth);
+  frontDrape.name='miquella-descending-robe';frontDrape.castShadow=frontDrape.receiveShadow=true;
+  frontDrape.visible=false;carrier.add(frontDrape);
   const updateArms=createRiderArms(carrier,surface,cloth);
   const updateRobe=fitLowerRobe(carrier,surface);updateRobe(null);
   let shotTime=null;
   carrier.userData.setShotPose=(time,boss)=>{
-    mount.position.copy(Number.isFinite(time)?eye:seatedEye);
-    mount.quaternion.copy(Number.isFinite(time)?portraitPose:seatedPose);mount.updateMatrix();
+    shoulders.material.userData.portraitLinen.value=Number.isFinite(time)?1:0;
+    shoulders.material.userData.descendingCollar.value=Number.isFinite(time)&&time>=59.15?
+      1-T.MathUtils.smootherstep(time,65.,72.):0;
+    const settle=Number.isFinite(time)?T.MathUtils.smootherstep(time,60.5,69.5):1;
+    mount.position.lerpVectors(eye,seatedEye,settle);
+    mount.quaternion.copy(portraitPose).slerp(seatedPose,settle);mount.updateMatrix();
     carrier.parent?.userData.setPortraitFrame?.(mount.matrix);
-    portraitFill.value=Number.isFinite(time)?T.MathUtils.smoothstep(time,57,63)*(1-T.MathUtils.smoothstep(time,72,76)):0;
-    shoulders.morphTargetInfluences[0]=Number.isFinite(time)?0:1;
+    portraitFill.value=Number.isFinite(time)?T.MathUtils.smoothstep(time,57,59.5)*(1-T.MathUtils.smoothstep(time,72,76)):0;
+    cloth.userData.gateSilk.value=Number.isFinite(time)&&time>=59.15?1-T.MathUtils.smoothstep(time,64.45,70):0;
+    const drapedHair=carrier.parent?.userData.portraitDrape;
+    if(drapedHair)drapedHair.value=cloth.userData.gateSilk.value;
+    shoulders.morphTargetInfluences[0]=settle;
+    const arrival=Number.isFinite(time)&&time>=59.15?1-T.MathUtils.smootherstep(time,61.8,64.45):0;
+    shoulders.morphTargetInfluences[1]=arrival;
+    frontDrape.visible=arrival>.001;
+    if(frontDrape.visible){
+      frontDrape.position.x=straighten.x*(arrival-1);frontDrape.position.z=straighten.z*(arrival-1);
+      const anchor=hem.getY(hem.count-1);
+      frontDrape.scale.y=.18+.82*arrival;frontDrape.position.y=anchor*(1-frontDrape.scale.y);
+    }
     shotTime=time;updateRobe(time);
     updateArms(boss,time);
   };

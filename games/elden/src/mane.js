@@ -14,7 +14,7 @@ export function createCompanionMane(ultra=false,fullDetail=ultra) {
     castLift: {value: 0},
     passingCut: {value:0},
     combatLight: {value:0},
-    onFoot: {value:0},
+    onFoot: {value:0},portraitDrape:{value:0},
     veilFlow: {value: new T.Vector3()},
     maneWind: {value: new T.Vector2()},
     maneWindMid: {value: new T.Vector2()},
@@ -126,7 +126,7 @@ export function createCompanionMane(ultra=false,fullDetail=ultra) {
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = hairMotionDeclarations+`uniform float maneTime; uniform float castLift; uniform float passingCut; uniform vec3 veilFlow; uniform vec2 maneWind; uniform vec2 maneWindMid; uniform vec2 maneWindLate; uniform vec3 maneUp; uniform float maneFloor; uniform float maneBurst;
         uniform mat4 portraitFrame,portraitInverse,portraitRestInverse;
-        uniform float combatLight,onFoot;attribute vec3 maneRoot; attribute float maneWeight; attribute float manePhase; attribute float maneDrop; attribute float maneDensity; varying float strandDensity; varying float strandAlong; varying float strandFamily;\n` + shader.vertexShader;
+        uniform float combatLight,onFoot,portraitDrape;attribute vec3 maneRoot; attribute float maneWeight; attribute float manePhase; attribute float maneDrop; attribute float maneDensity; varying float strandDensity; varying float strandAlong; varying float strandFamily;\n` + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
         #include <begin_vertex>
         strandDensity=maneDensity;strandAlong=maneWeight;strandFamily=.5+.5*sin(manePhase*1.73);
@@ -214,9 +214,13 @@ export function createCompanionMane(ultra=false,fullDetail=ultra) {
         float behind=max(0.,.16-atFace.z)*nearCheek+max(0.,.35-atFace.z)*onCloth;
         transformed+=(portraitFrame*vec4(.12*onCloth*sign(atFace.x),0.,behind,0.)).xyz;
         // On the landing the train of free hair follows behind the stride.
+        float fall=portraitDrape*smoothstep(.15,.79,maneWeight);
+        transformed.x=mix(transformed.x,maneRoot.x+.78*(transformed.x-maneRoot.x),fall);
+        transformed.y-=fall*(.38+.21*strandFamily);
+        transformed.z+=fall*.43;
         float train=onFoot*smoothstep(.16,.89,maneWeight);
-        transformed.z+=train*(1.6+.44*sin(manePhase));
-        transformed.y+=train*(.85+.56*sin(manePhase*.71));
+        transformed.z+=train*(1.16+.25*sin(manePhase));
+        transformed.y+=train*(1.25+.35*sin(manePhase*.71));
         vec3 maneWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
         transformed += maneUp * max(0.0, maneFloor - maneWorld.y)*smoothstep(.015,.12,maneWeight);
       `);
@@ -425,7 +429,7 @@ export function createCompanionMane(ultra=false,fullDetail=ultra) {
     uniforms.maneWindMid.value.clampLength(0,1.25);uniforms.maneWindLate.value.clampLength(0,1.5);
   };
   group.userData.combatLight=uniforms.combatLight;
-  group.userData.walkingHair=uniforms.onFoot;
+  group.userData.walkingHair=uniforms.onFoot;group.userData.portraitDrape=uniforms.portraitDrape;
   group.userData.setPortraitFrame=(matrix,bind=false)=>{
     if(bind)uniforms.portraitRestInverse.value.copy(matrix).invert();
     uniforms.portraitFrame.value.copy(matrix);uniforms.portraitInverse.value.copy(matrix).invert();

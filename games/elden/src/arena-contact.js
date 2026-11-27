@@ -9,26 +9,33 @@ export const bossClearance = 1.7;
 // once so contact follows the same ridges and chipped edges as the picture.
 export function shoalSurface(positions, floor) {
   const rows = new Map();
-  const cell = 2;
+  const cell = .75;
   for (let i = 0; i < positions.length; i += 9) {
     const [ax, ay, az, bx, by, bz, cx, cy, cz] = positions.subarray(i, i + 9);
     const dx = bx - ax, dz = bz - az, ex = cx - ax, ez = cz - az;
     const det = dx * ez - dz * ex;
     if (Math.abs(det) < 1e-8) continue;
-    const tri = {ax, ay, az, dx, dz, ex, ez, by: by - ay, cy: cy - ay, det};
-    for (let z = Math.floor(Math.min(az, bz, cz) / cell); z <= Math.floor(Math.max(az, bz, cz) / cell); z++) {
+    const minX=Math.min(ax,bx,cx),maxX=Math.max(ax,bx,cx);
+    const minZ=Math.min(az,bz,cz),maxZ=Math.max(az,bz,cz);
+    const tri = {ax, ay, az, dx, dz, ex, ez, by: by - ay, cy: cy - ay, det,minX,maxX,minZ,maxZ,top:Math.max(ay,by,cy)};
+    for (let z = Math.floor(minZ / cell); z <= Math.floor(maxZ / cell); z++) {
       if (!rows.has(z)) rows.set(z, new Map());
       const row = rows.get(z);
-      for (let x = Math.floor(Math.min(ax, bx, cx) / cell); x <= Math.floor(Math.max(ax, bx, cx) / cell); x++) {
+      for (let x = Math.floor(minX / cell); x <= Math.floor(maxX / cell); x++) {
         if (!row.has(x)) row.set(x, []);
         row.get(x).push(tri);
       }
     }
   }
+  let lastX=NaN,lastZ=NaN,candidates;
   return (x, z) => {
     let y = floor(x, z);
-    const candidates = rows.get(Math.floor(z / cell))?.get(Math.floor(x / cell));
+    const ix=Math.floor(x / cell),iz=Math.floor(z / cell);
+    if(ix!==lastX||iz!==lastZ){
+      candidates=rows.get(iz)?.get(ix);lastX=ix;lastZ=iz;
+    }
     if (candidates) for (const t of candidates) {
+      if(y>t.top||x<t.minX||x>t.maxX||z<t.minZ||z>t.maxZ)continue;
       const u = ((x - t.ax) * t.ez - (z - t.az) * t.ex) / t.det;
       const v = ((z - t.az) * t.dx - (x - t.ax) * t.dz) / t.det;
       if (u >= 0 && v >= 0 && u + v <= 1) y = Math.max(y, t.ay + u * t.by + v * t.cy);

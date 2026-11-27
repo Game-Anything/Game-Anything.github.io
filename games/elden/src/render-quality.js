@@ -26,6 +26,19 @@ export class RenderQuality {
 // Smaller horizontal mip passes read a larger texture, so keep their original
 // spaced taps. The vertical passes and the first horizontal pass share grids.
 export function optimizeBloom(pass){
+ // One non-finite HDR pixel (an additive overflow or a division by zero in an
+ // effect shader) is spread by every blur and downsample into large black
+ // blocks. Bloom starts from finite light only; finite values are unchanged.
+ const highPass=pass.materialHighPassFilter,sample='vec4 texel = texture2D( tDiffuse, vUv );';
+ if(highPass.fragmentShader.includes(sample)){
+  // Inspect the IEEE exponent as an integer. A real NaN read from the
+  // half-float target can survive a floating-point isnan branch on ANGLE.
+  highPass.fragmentShader=highPass.fragmentShader.replace(sample,sample+`
+    if(any(equal(floatBitsToUint(texel)&uvec4(0x7f800000u),uvec4(0x7f800000u)))){
+      gl_FragColor=vec4(0.0);return;
+    }`);
+  highPass.needsUpdate=true;
+ }
  const targets=[pass.renderTargetBright,...pass.renderTargetsHorizontal,...pass.renderTargetsVertical];
  for(const target of targets)target.depthBuffer=false;
  for(const [mip,material] of pass.separableBlurMaterials.entries()){

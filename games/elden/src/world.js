@@ -996,6 +996,8 @@ export function makeWorld(scene,renderer=null,{ultra=true,fullShadows=ultra}={})
   // Review stills: jump straight to the settled light of a phase.
   settlePhase(phase,player){phaseBlend=phase===2?1:0;applyPhase(player);},
   tick(t,phase,player,stage='combat'){const outside=['mist','entry','return'].includes(stage);preparation.visible=outside;preparationFloor.visible=outside;floor.visible=!outside;dustMat.uniforms.time.value=t;gateHaze.time.value=t;skyMat.uniforms.time.value=t;mistMat.uniforms.time.value=t;
+  skyMat.uniforms.cinematicGold.value=stage==='phase'?1:0;
+  lightColumns.visible=stage!=='phase';
    // The light does not switch between the phases: it eases over, starting with the transition scene.
    const step=phaseClock===null?0:Math.min(.1,Math.max(0,t-phaseClock));phaseClock=t;
    const goal=phase===2?1:0;

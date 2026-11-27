@@ -128,10 +128,18 @@ export function installAtmosphere(){
 }
 // Display-referred finishing pass: the footage is soft, slightly lifted in the
 // blacks and olive-gold in the mid tones, with a mild vignette.
-const gradeUniforms={phase:{value:0},flash:{value:0},nearGlare:{value:0},aspect:{value:16/9}};
-const gradeColor=`uniform float phase,flash,nearGlare,aspect;
+const gradeUniforms={phase:{value:0},flash:{value:0},nearGlare:{value:0},aspect:{value:16/9},kneelingPortrait:{value:0}};
+const gradeColor=`uniform float phase,flash,nearGlare,aspect,kneelingPortrait;
     vec4 gradeDisplay(vec4 texel,vec2 uv){
       vec3 c=texel.rgb;
+      // Red light reflected from the airborne dust fills the lower face.
+      // The narrow gleam at the ridge of the visor stays brass coloured.
+      if(kneelingPortrait>0.){
+        float head=1.-smoothstep(.16,.42,length((uv-vec2(.50,.56))*vec2(1.35,.90)));
+        float gold=smoothstep(.36,.79,c.g)*head*smoothstep(.44,.70,uv.y);
+        vec3 dust=c*vec3(.85,.54,.48)+vec3(.058,.003,.002)*(1.-c);
+        c=mix(c,dust,kneelingPortrait*(.89-.72*gold));
+      }
       float l=dot(c,vec3(.2126,.7152,.0722));
       // Gentle shoulder and toe: bright haze keeps its tint, shadows stay open.
       float toe=1.-smoothstep(.05,.38,l);
@@ -171,16 +179,61 @@ export const GradeShader={
 // Apply the display-space grade immediately after Three's tone mapping and
 // color conversion. FXAA still samples the graded image in the following pass.
 export function gradeOutput(pass,bloom=null){
+  // OutputPass uses RawShaderMaterial. Its default GLSL 1 source cannot
+  // compile the unsigned bit checks used to recover HDR pixels on WebGL 2.
+  pass.material.glslVersion=T.GLSL3;
+  pass.material.vertexShader='#define attribute in\n#define varying out\n'+pass.material.vertexShader;
+  // The HDR buffer is RGBA16F. Even after bloom rejects overflowing effects,
+  // the scene itself is sampled again here before ACES and FXAA.
+  pass.uniforms.sceneTexel={value:new T.Vector2(1,1)};
+  const setSize=pass.setSize;
+  pass.setSize=function(width,height){
+    setSize.call(this,width,height);
+    this.uniforms.sceneTexel.value.set(1/Math.max(1,Math.floor(width)),1/Math.max(1,Math.floor(height)));
+  };
+  const recoverScene=`uniform sampler2D tDiffuse;
+    uniform vec2 sceneTexel;
+    bool finiteLight(vec3 light){
+      // Compare the IEEE magnitudes so ANGLE cannot fold away NaN handling.
+      uvec3 magnitude=floatBitsToUint(light)&uvec3(0x7fffffffu);
+      return all(lessThanEqual(magnitude,uvec3(floatBitsToUint(65504.0))));
+    }
+    void sampleNeighbor(vec2 uv,inout vec3 sum,inout float count){
+      vec3 light=texture2D(tDiffuse,uv).rgb;
+      if(finiteLight(light)){sum+=light;count+=1.;}
+    }
+    vec4 sceneLight(vec2 uv){
+      vec4 pixel=texture2D(tDiffuse,uv);
+      if(finiteLight(pixel.rgb))return pixel;
+      vec2 stepUV=sceneTexel;
+      for(int i=0;i<4;i++){
+        vec3 light=vec3(0.);float count=0.;
+        sampleNeighbor(uv+vec2(stepUV.x,0.),light,count);
+        sampleNeighbor(uv-vec2(stepUV.x,0.),light,count);
+        sampleNeighbor(uv+vec2(0.,stepUV.y),light,count);
+        sampleNeighbor(uv-vec2(0.,stepUV.y),light,count);
+        if(count>0.)return vec4(light/count,1.);
+        stepUV*=4.;
+      }
+      return vec4(.18,.18,.18,1.);
+    }`;
+  let uniforms=recoverScene,sample='gl_FragColor = sceneLight(vUv);';
   if(bloom){
     bloom.outputBloomTexture=true;
     pass.uniforms.sceneBloom={value:bloom.renderTargetsHorizontal[0].texture};
-    pass.material.fragmentShader=pass.material.fragmentShader
-      .replace('uniform sampler2D tDiffuse;', 'uniform sampler2D tDiffuse;\nuniform sampler2D sceneBloom;')
-      .replace('gl_FragColor = texture2D( tDiffuse, vUv );',
-               'gl_FragColor = texture2D( tDiffuse, vUv ) + texture2D( sceneBloom, vUv );');
+    uniforms+='\nuniform sampler2D sceneBloom;';
+    sample+='\nvec4 glow=texture2D(sceneBloom,vUv); if(finiteLight(glow.rgb))gl_FragColor+=glow;';
   }
+  pass.material.fragmentShader=pass.material.fragmentShader
+    .replace('uniform sampler2D tDiffuse;',uniforms)
+    .replace('gl_FragColor = texture2D( tDiffuse, vUv );',sample);
   Object.assign(pass.uniforms,T.UniformsUtils.clone(gradeUniforms));
-  pass.material.fragmentShader=`#define main convertForDisplay
+  pass.material.fragmentShader=`precision highp int;
+    #define varying in
+    #define texture2D texture
+    out highp vec4 displayColor;
+    #define gl_FragColor displayColor
+    #define main convertForDisplay
     ${pass.material.fragmentShader}
     #undef main
     ${gradeColor}

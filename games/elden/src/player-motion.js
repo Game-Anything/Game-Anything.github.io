@@ -23,7 +23,7 @@ const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const FIELDS=['hip','rot','chest','head','hR','hL','eR','eL','bR','bL','kR','kL'];
 const HOME={Right:[.12,0,-.08],Left:[-.11,0,.08]},HOME_YAW={Right:-.24,Left:.10};
 const CHAIN_LINK={hip:[.01,-.06,.04],rot:[-.16,.06,0],chest:[-.26,.08,0],head:[.34,0],hR:[.37,1.02,-.02],bR:[.16,-.06,1],hL:[-.33,1.02,.01],bL:[-.35,-.35,-.84]};
-const GRIP_SPACING=.14;
+const GRIP_SPACING=.18;
 
 function blank(){
  return {hip:[0,-.022,0],rot:[-.07,.03,0],chest:[-.10,.03,0],head:[.14,0],
@@ -31,6 +31,42 @@ function blank(){
   bR:[.36,-.32,1],bL:[-.18,-.80,-.52],kR:[.16,1],kL:[-.14,1],spin:0,pivot:.95};
 }
 function copyPose(q){const o={spin:q.spin,pivot:q.pivot};for(const k of FIELDS)o[k]=q[k].slice();return o;}
+// Trace the model's own forefoot, arch and heel. A narrow leather welt
+// separates the outsole from the upper without extending the original toe.
+function fitBootWelt(foot,level,origin,points,contacts){
+ if(points.length<12)return;
+ const lo=Math.min(...points.map(p=>p.z)),hi=Math.max(...points.map(p=>p.z)),span=hi-lo;
+ if(span<.10)return;
+ const left=[],right=[];
+ for(let i=0;i<9;i++){
+  const z=lerp(lo,hi,(i+.16)/8.32);
+  const band=points.filter(p=>Math.abs(p.z-z)<span*.085);
+  if(!band.length)continue;
+  const floor=Math.min(...band.map(p=>p.y)),low=band.filter(p=>p.y<floor+.045);
+  let a=Math.min(...low.map(p=>p.x)),b=Math.max(...low.map(p=>p.x));
+  const taper=[.48,.84,.98,1,1,.99,.97,.89,.60][i],middle=(a+b)/2;
+  a=lerp(middle,a,taper);b=lerp(middle,b,taper);
+  left.push(V(a-.003,floor,z));right.push(V(b+.003,floor,z));
+ }
+ const outline=left.concat(right.reverse());
+ if(outline.length<8)return;
+ const positions=[],indices=[],undo=level.clone().invert();
+ for(const edge of outline){
+  const sign=edge.x<0?-1:1;
+  for(const [width,rise] of [[0,.005],[.002,.011],[0,.018]]){
+   const p=edge.clone();p.x+=sign*width;p.y+=rise;
+   if(rise===.005)contacts.push(p.clone());
+   foot.worldToLocal(p.applyQuaternion(undo).add(origin));positions.push(p.x,p.y,p.z);
+  }
+ }
+ for(let i=0;i<outline.length;i++)for(let j=0;j<2;j++){
+  const a=3*i+j,b=3*((i+1)%outline.length)+j;indices.push(a,b,a+1,b,b+1,a+1);
+ }
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+ geo.setIndex(indices);geo.computeVertexNormals();
+ const welt=new T.Mesh(geo,new T.MeshStandardMaterial({color:0x453932,roughness:.88,side:T.DoubleSide}));
+ welt.name='boot-welt';welt.castShadow=true;welt.receiveShadow=true;foot.add(welt);
+}
 function bladeBetween(from,to,t){
  const a=V(...from).normalize(),b=V(...to).normalize();
  const arc=new T.Quaternion().setFromUnitVectors(a,b);
@@ -100,6 +136,7 @@ export class PlayerMotion{
   this.actor=actor;this.ready=false;this.phase=0;this.speed=0;this.dir=[0,1];this.vel=V();this.last=V();this.hasLast=false;
   this.mode='idle';this.modeKey='';this.from=null;this.blend=1;this.blendTime=.14;this.pose=blank();
   this.feet={Right:{w:V(),h:0,pitch:0,yaw:0,step:null,set:false,air:0},Left:{w:V(),h:0,pitch:0,yaw:0,step:null,set:false,air:0}};
+  this.reachFrame=new T.Matrix4();this.reachUp=V();this.reachDelta=V();
   this.footBlend=1;this.plan={};this.owned=false;this.wasOwned=false;this.legacy=null;this.legacyBlend=1;this.land=9;this.turn=0;this.lastYaw=0;this.stepCooldown=0;
   this.accelLean=0;this.lastSpeed=0;this.cache={};
   this.gripWeight=0;
@@ -135,6 +172,31 @@ export class PlayerMotion{
   this.footRest.Right.premultiply(new T.Quaternion().setFromAxisAngle(YA,-yawR));
   this.footRest.Left.premultiply(new T.Quaternion().setFromAxisAngle(YA,-yawL));
   this.ankleHeight=Math.min(height.Right,height.Left);
+  // Keep the low points of the actual skinned boots, including their wide
+  // outer edges. The toe joint is well behind the end of the visible sole.
+  this.soles={Right:[],Left:[]};
+  for(const side of ['Right','Left']){
+   const foot=this.bone(side+'Foot'),origin=foot.getWorldPosition(V());
+   const level=this.footRest[side].clone().multiply(foot.getWorldQuaternion(new T.Quaternion()).invert());
+   const cells=new Map(),point=V(),surface=[];
+   a.model.traverse(mesh=>{
+    if(!mesh.isSkinnedMesh)return;
+    const {skinIndex,skinWeight}=mesh.geometry.attributes;
+    const bones=mesh.skeleton.bones.map(b=>b===foot||b.name.includes(side+'Toe'));
+    for(let i=0;i<skinIndex.count;i++){
+     let weight=0;
+     for(let k=0;k<4;k++)if(bones[skinIndex.getComponent(i,k)])weight+=skinWeight.getComponent(i,k);
+     if(weight<.50)continue;
+     mesh.getVertexPosition(i,point).applyMatrix4(mesh.matrixWorld).sub(origin).applyQuaternion(level);
+     if(point.y<.025)surface.push(point.clone());
+     const cell=Math.floor(point.x/.055)+','+Math.floor(point.z/.055);
+     if(!cells.has(cell)||point.y<cells.get(cell).y)cells.set(cell,point.clone());
+    }
+   });
+   this.soles[side]=Array.from(cells.values());
+   fitBootWelt(foot,level,origin,surface,this.soles[side]);
+  }
+  this.lastSupport={Right:{},Left:{}};
   const up=this.bone('RightUpLeg').getWorldPosition(V()),kn=this.bone('RightLeg').getWorldPosition(V()),an=this.bone('RightFoot').getWorldPosition(V());
   this.legLength=up.distanceTo(kn)+kn.distanceTo(an);
   a.root.position.copy(rp);a.root.quaternion.copy(rq);a.visual.position.copy(vp);a.visual.quaternion.copy(vq);
@@ -180,9 +242,19 @@ export class PlayerMotion{
  }
  gait(c,q){
   const v=this.speed,jg=clamp(v/3.15,0,1),sp=clamp((v-3.3)/2.1,0,1);
-  const stepLen=v<.8?lerp(.30,.52,v/.8):v<3.15?lerp(.52,.98,(v-.8)/2.35):lerp(.98,1.52,sp);
-  const cycle=2*stepLen,duty=lerp(lerp(.63,.43,jg),.33,sp),travel=cycle*duty;
+  const walking=c.state.motion==='walk';
   const [dx,df]=this.dir,back=df<-.3?1:0,ph=this.phase;
+  const stepLen=walking ? lerp(.36,.83,ss(v,0,2.15)) :
+    v<.8?lerp(.30,.52,v/.8):v<3.15?lerp(.52,.98,(v-.8)/2.35):lerp(.98,1.52,sp);
+  const sideways=Math.abs(dx),retreat=Math.max(0,-df);
+  // The locked approach and retreat shuffle under the body. Save the long
+  // foot track and folded recovery for the side-on sprint at 13 seconds.
+  const strideScale=walking?1-.17*sideways-.12*retreat:1;
+  const cycle=2*stepLen*strideScale;
+  const duty=walking?lerp(.64,.59,jg)+.025*sideways:lerp(lerp(.63,.43,jg),.33,sp);
+  const travel=cycle*duty;
+  const heelStrike=-.24*jg*Math.max(0,df)+.26*jg*Math.max(0,-df);
+  const toeOff=.60*jg*Math.max(0,df)-.21*jg*Math.max(0,-df);
   // Oblique foot tracks for locked strafing; in the 4.3–5.4 s reference the
   // trailing boot passes behind the planted boot rather than through it.
   const live=c.state.liveLocomotion,stance=live?-.70*dx:0;
@@ -192,38 +264,71 @@ export class PlayerMotion{
    if(u<duty){
     const s=u/duty;along=travel*(.42-s);
     const push=ss(s,.62,1)*jg;y=.085*push;pitch=-.26*jg*(1-ss(s,0,.22))*(1-back)+.80*push*(1-back*.6);
+    if(walking){
+     pitch=heelStrike*(1-ss(s,0,.23))+toeOff*ss(s,.62,1);
+     y=0;
+    }
    }else{
     const w=(u-duty)/(1-duty);along=travel*(-.58+ease(w));
+    // Match the stance velocity at both ends of a walking swing. The boot
+    // leaves and meets its ground mark with zero horizontal world velocity.
+    if(walking)along-=cycle*(1-duty)*w*(1-w)*(1-2*w);
     const kick=(.07+.10*jg+.30*sp)*Math.exp(-Math.pow((w-.27)/.21,2))*(1-back*.7);
     y=.085*(1-ss(w,0,.25))*jg+(.045+.075*jg+.04*sp)*Math.sin(Math.PI*w)+kick;
     pitch=lerp(.80*jg+.25,-.26*jg,ss(w,.22,.86))*(1-back*.6);
-    if(live){
+    if(walking){
+     const swingArc=Math.sin(Math.PI*w);
+     y=(.056+.063*jg)*swingArc*swingArc*(1.43-.68*w)*(1-.23*sideways-.16*retreat);
+     pitch=lerp(toeOff,heelStrike,ss(w,.12,.80));
+    }else if(live){
      const toeOff=.80*jg*(1-back*.6),heelStrike=-.26*jg*(1-back);
      pitch=lerp(toeOff,heelStrike,ss(w,.16,.92));
      y-=kick*(1-ss(w,0,.13)*(1-ss(w,.85,1)));
+     const recovery=sp*Math.max(0,df)*Math.sin(Math.PI*w)**2*(1-ss(w,.2,.74));
+     along-=.19*recovery;y+=.18*recovery;
+     pitch+=.29*recovery;
     }
    }
    const width=live?.115+.035*Math.abs(dx)-.018*sp:.105-.035*sp-.02*jg*Math.abs(dx);
-   out[side]={local:[sg*width*Math.cos(stance)+dx*along,y,df*along+sg*width*Math.sin(stance)],pitch,yaw:sg*-.10*(1-sp)+Math.atan2(-dx,Math.max(.2,df))*.55*(1-back)};
+   // Give the passing boot a separate fore/aft track on a locked sidestep.
+   const stagger=live&&walking?-.085*dx:0;
+   out[side]={local:[sg*width*Math.cos(stance)+dx*along,y,df*along+sg*(width*Math.sin(stance)+stagger)],pitch,yaw:sg*-.10*(1-sp)+Math.atan2(-dx,Math.max(.2,df))*.55*(1-back)};
+   if(walking&&c.state.walkSurface)out[side].supportPhase=u<duty?0:(u-duty)/(1-duty);
   }
   const c2=Math.cos(TAU*ph),s2=Math.sin(TAU*ph),bob=Math.cos(2*TAU*(ph-duty*.5));
-  const bobAmp=lerp(-.012,.030+.026*sp,jg);
+  // A walking body vaults over the stance leg; a running body compresses
+  // over it. Keep vertical weight transfer present at ordinary walk speeds.
+  const bobAmp=c.state.motion==='walk'?-(.012+.014*jg):lerp(-.012,.030+.026*sp,jg);
   const leanAmt=lerp(.045,.15,jg)+.33*sp;
   const heading=Math.atan2(-dx,Math.max(.25,Math.abs(df)))*(df<0?-.6:1);
   const brace=c.state.evasiveRun?ss(v,1.5,4.3):0,inside=Math.tanh(c.aim*2.8);
-  q.hip=[.022*(1-.5*sp)*s2*(1-Math.abs(dx)*.6),-(.018+.04*jg+.045*sp)-bobAmp*bob,.03*jg+.05*sp];
-  const swing=(.07+.09*jg+.07*sp)*c2;
+  const supportShift=walking?(.030+.016*jg)*Math.cos(TAU*(ph-duty*.44)):.022*(1-.5*sp)*s2;
+  q.hip=[supportShift*(1-Math.abs(dx)*.6),-(.018+.04*jg+.045*sp)-bobAmp*bob,.03*jg+.05*sp];
+  const swing=(.07+.09*jg+.07*sp)*c2*(walking?1-.42*sideways-.22*retreat:1);
   q.rot=[swing+heading*.42,leanAmt*.42*df,-.055*jg*s2+leanAmt*.5*dx];
   q.chest=[-swing*1.75-heading*.30,leanAmt*.58*df+.02*bob,.03*s2+leanAmt*.25*dx];
   q.hip[1]-=.19*brace;q.hip[0]+=.075*inside*brace;
   q.rot[1]+=.22*brace;q.rot[2]-=.17*inside*brace;
   q.chest[1]+=.24*brace;q.chest[2]-=.16*inside*brace;q.chest[0]+=.22*inside*brace;
   q.head=[swing*.8-heading*.10-.17*inside*brace,-leanAmt*.62*df-.22*brace];
+  if(c.state.walkSurface){
+   const turn=clamp(this.turn*.052,-.27,.27);
+   q.chest[0]+=turn*.36;q.head[0]+=turn*.70;
+   q.chest[1]+=.105*sp*Math.max(0,df);q.head[1]+=.015*sp*Math.max(0,df);
+  }
   // Off hand swings against the stride; the sword arm stays on the hip line with a short counter-swing.
   const arm=(.10+.17*jg+.12*sp);
   q.hL=this.torso(q,[-.33-.03*sp,.96+.08*jg*Math.abs(c2)+.16*sp*Math.max(0,c2),.03+arm*c2+.10*sp]);
   q.eL=[-.42,-.25-.2*sp,-.8];
   q.bL=[-.20,-.62+.25*sp*c2,-.72];
+  if(c.state.leftEquipped&&live){
+   // The armed off hand carries its weight behind the hip as the elbow
+   // swings. Keep the guard outside the skirt through the returning step.
+   const pendulum=walking?Math.cos(TAU*ph-.31):c2;
+   q.hL=this.torso(q,[-.38-.035*jg-.015*pendulum,.95+.04*jg+.022*pendulum+.07*sp,.022+arm*.65*pendulum+.06*sp]);
+   q.eL=[-.45,-.24+.06*pendulum,-.81];
+   q.bL=[-.38,-.48+.10*pendulum,-.82];
+  }
   q.hR=this.torso(q,[.36+.02*sp,.945+.03*jg*Math.abs(c2)+.05*sp,.14-(.05+.05*jg+.07*sp)*c2+.05*sp]);
   q.eR=[.52,-.28,-.78];
   // In the side view at 12.95–13.68s the runner carries the sword at
@@ -232,7 +337,7 @@ export class PlayerMotion{
   if(live||brace>0){
    // In the 12.95–13.32 s side view the point stays close to level at
    // the hip while the boots pass and the off arm counter-swings.
-   q.bR=[lerp(.28,.10,sp),lerp(-.17,-.09,sp)+.023*c2*jg,1];
+   q.bR=[lerp(.40,.14,sp),lerp(-.14,-.09,sp)+.023*c2*jg,1];
   }
   q.kR=[.15+.2*dx,1];q.kL=[-.13+.2*dx,1];
   return out;
@@ -532,12 +637,22 @@ export class PlayerMotion{
   else this.gripWeight=clamp(this.gripWeight+(state.twoHanded?dt:-dt)/.18,0,1);
   if(this.speed>.25){
    const lx=this.vel.x*Math.cos(yaw)-this.vel.z*Math.sin(yaw),lz=this.vel.x*Math.sin(yaw)+this.vel.z*Math.cos(yaw);
-   const n=Math.hypot(lx,lz)||1,k=1-Math.exp(-dt*12);
-   this.dir=[lerp(this.dir[0],lx/n,k),lerp(this.dir[1],-lz/n,k)];const dn=Math.hypot(this.dir[0],this.dir[1])||1;this.dir[0]/=dn;this.dir[1]/=dn;
+   // Velocity already smooths turns through zero. Filtering unit directions
+   // a second time traps a straight reversal on the old heading.
+   const length=Math.hypot(lx,lz);
+   this.dir=[lx/length,-lz/length];
   }
   this.land+=dt;this.stepCooldown=Math.max(0,this.stepCooldown-dt);
   if(!this.owned){if(teleport)this.feet.Right.set=false;return false;}
-  this.g=state.groundOffset||0;this.groundAt=state.groundAt||null;
+  const floor=state.groundOffset||0;
+  const onFoot=state.walkSurface&&!teleport&&['walk','idle'].includes(state.motion);
+  // The pelvis follows the slope over several frames. The actual terrain under
+  // each heel and toe is still sampled immediately by walkingAnkle.
+  const previous=this.supportFloor;
+  this.g=onFoot&&previous!=null&&Math.abs(floor-previous)<.36
+   ? lerp(previous,floor,1-Math.exp(-dt*14)) : floor;
+  this.supportFloor=onFoot?this.g:null;
+  this.groundAt=state.groundAt||null;
   if(teleport||!this.feet.Right.set)this.resetFeet();
 
   // Action selection.
@@ -614,6 +729,20 @@ export class PlayerMotion{
   this.plan={};
  }
  ground(x,z){return this.groundAt?this.groundAt(x,z):this.g;}
+ walkingAnkle(side,x,z,yaw,pitch){
+  // Planted marks persist for multiple render frames. Reuse only the exact
+  // footprint on the same terrain sampler, including its heel/toe pitch.
+  const last=this.lastSupport[side];
+  if(last.x===x&&last.z===z&&last.yaw===yaw&&last.pitch===pitch&&last.ground===this.groundAt&&(this.groundAt||last.base===this.g))return last.height;
+  const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  let height=-Infinity;
+  for(const pt of this.soles[side]){
+   const pz=-sp*pt.y+cp*pt.z,py=cp*pt.y+sp*pt.z;
+   height=Math.max(height,this.ground(x+cy*pt.x+sy*pz,z-sy*pt.x+cy*pz)-py);
+  }
+  last.x=x;last.z=z;last.yaw=yaw;last.pitch=pitch;last.ground=this.groundAt;last.base=this.g;
+  return last.height=height+.006;
+ }
 
  apply(q,legs,dt,state){
   const a=this.actor,root=a.root,visual=a.visual,yaw=state.yaw||0;
@@ -648,9 +777,12 @@ export class PlayerMotion{
   }
   // Feet.
   const k=ease(this.footBlend);
+  const goals=[];
+  let reachDrop=0,reachParent;
   for(const side of ['Right','Left']){
    const f=this.feet[side],cmd=legs[side]||{plant:true},other=this.feet[side==='Right'?'Left':'Right'];
    const upper=this.bone(side+'UpLeg'),foot=this.bone(side+'Foot');
+   if(cmd.supportPhase==null){f.gaitPlanted=false;f.release=null;}
    if(cmd.plant){
     // Hold the ground mark; re-step when the body has turned or drifted away from it.
     if(cmd.home&&!f.step){
@@ -671,24 +803,65 @@ export class PlayerMotion{
    }else{
     f.step=null;
     const w=this.W(cmd.local[0],0,cmd.local[2]),kk=cmd.exact?1:k;
+    if(cmd.supportPhase===0){
+     if(f.gaitPlanted){w.x=f.w.x;w.z=f.w.z;}
+     f.gaitPlanted=true;f.release=null;
+    }else if(cmd.supportPhase>0){
+     if(f.gaitPlanted)f.release=f.w.clone().sub(w);
+     f.gaitPlanted=false;
+     if(f.release)w.addScaledVector(f.release,1-ease(cmd.supportPhase));
+    }
     f.w.x=lerp(f.w.x,w.x,kk);f.w.z=lerp(f.w.z,w.z,kk);f.h=lerp(f.h,cmd.local[1],kk);
-    f.pitch=lerp(f.pitch,cmd.pitch||0,kk);f.yaw=f.yaw+wrap(yaw+(cmd.yaw||0)-f.yaw)*kk;f.air=lerp(f.air,cmd.air||0,kk);
+    f.pitch=lerp(f.pitch,cmd.pitch||0,kk);
+    // A planted boot keeps its heading as the pelvis turns over it.
+    // Spread the turn across the swing rather than snapping on toe-off.
+    const turnGain=cmd.supportPhase==null?kk:cmd.supportPhase===0?0:Math.min(kk,1-Math.exp(-dt*(18+26*cmd.supportPhase)));
+    f.yaw+=wrap(yaw+(cmd.yaw||0)-f.yaw)*turnGain;f.air=lerp(f.air,cmd.air||0,kk);
    }
    // Ankle target: terrain under a grounded foot, the actor's own base height while airborne.
-   let support=this.ground(f.w.x,f.w.z);
-   if(state.walkSurface&&f.air<1&&['idle','move','roll','attack'].includes(this.mode)){
+   const walkingSole=state.walkSurface&&(this.mode==='move'||this.mode==='idle')&&this.soles[side].length;
+   let support=walkingSole?this.walkingAnkle(side,f.w.x,f.w.z,f.yaw,f.pitch)-this.ankleHeight:this.ground(f.w.x,f.w.z);
+   if(!walkingSole&&state.walkSurface&&f.air<1&&['idle','move','roll','attack'].includes(this.mode)){
      const forwardX=-Math.sin(f.yaw),forwardZ=-Math.cos(f.yaw),toe=this.toeSpan[side],heel=toe*.42;
      support=Math.max(support,
        this.ground(f.w.x+forwardX*toe,f.w.z+forwardZ*toe)+toe*Math.sin(f.pitch),
        this.ground(f.w.x-forwardX*heel,f.w.z-forwardZ*heel)-heel*Math.sin(f.pitch));
     }
     const groundY=lerp(support,root.position.y+this.g,clamp(f.air,0,1));
-   const target=V(f.w.x,groundY+this.ankleHeight+f.h+.075*Math.max(0,Math.sin(f.pitch)),f.w.z);
+   // Walking contact already raises the ankle around the heel or toe above.
+   const extraLift=this.mode==='move'&&state.motion==='walk'&&state.walkSurface?0:.075*Math.max(0,Math.sin(f.pitch));
+   const target=V(f.w.x,groundY+this.ankleHeight+f.h+extraLift,f.w.z);
+   // A world-space footprint can be below a ridge under the pelvis. Allow
+   // the hips to yield to the stance leg before solving either knee.
+   if(walkingSole&&cmd.supportPhase!=null){
+    const parent=upper.parent,inverse=this.reachFrame,up=this.reachUp;
+    if(parent!==reachParent){
+     parent.updateWorldMatrix(true,false);inverse.copy(parent.matrixWorld).invert();
+     up.setFromMatrixColumn(inverse,1);reachParent=parent;
+    }
+    const a=upper.position,lower=this.bone(side+'Leg');
+    const length=lower.position.length()+foot.position.length();
+    const delta=this.reachDelta.copy(target).applyMatrix4(inverse).sub(a);
+    const A=up.lengthSq(),B=delta.dot(up),C=delta.lengthSq()-(length*.991)**2;
+    if(C>0&&B<0){
+     const descent=(-B-Math.sqrt(Math.max(0,B*B-A*C)))/A;
+     const contact=cmd.supportPhase===0?1:Math.max(0,1-f.h/.065);
+     reachDrop=Math.max(reachDrop,Math.min(.19,descent)*contact);
+    }
+   }
+   goals.push({side,f,cmd,upper,foot,target,walkingSole});
+  }
+  this.walkReachDrop=Math.max(reachDrop,(this.walkReachDrop||0)*Math.exp(-dt*16));
+  if(this.walkReachDrop>.00005&&state.walkSurface&&this.mode==='move')visual.position.y-=this.walkReachDrop;
+  for(const {side,f,cmd,upper,foot,target,walkingSole} of goals){
    // A planted foot beyond the leg's reach drags toward the hip instead of leaving the ground.
    const joint=upper.getWorldPosition(V()),dy=joint.y-target.y,reach=this.legLength*.985;
    const hmax=Math.sqrt(Math.max(.0004,reach*reach-dy*dy)),hx=target.x-joint.x,hz=target.z-joint.z,hd=Math.hypot(hx,hz);
    if(hd>hmax&&cmd.plant){
     const sc=hmax/hd;target.x=joint.x+hx*sc;target.z=joint.z+hz*sc;
+    // When a trailing leg reaches its limit on a stop, the reachable
+    // foothold may be on the uphill side of the original planted mark.
+    if(walkingSole)target.y=Math.max(target.y,this.walkingAnkle(side,target.x,target.z,f.yaw,f.pitch)+f.h);
     const drag=1-Math.exp(-dt*18);f.w.x=lerp(f.w.x,target.x,drag);f.w.z=lerp(f.w.z,target.z,drag);
    }
    const kp=side==='Right'?q.kR:q.kL;
@@ -706,7 +879,8 @@ export class PlayerMotion{
   let rearGrip,directionAtGrip;
   const leftLead=this.gripSide==='Left'&&this.gripWeight>0;
   const supportSide=leftLead?'Right':'Left';
-  const gripSpacing=leftLead?.06*(a.weapons.find(w=>w.side==='Left')?.length||.61)/.61:GRIP_SPACING;
+  // The left dagger has a short leather grip ending at its rounded pommel.
+  const gripSpacing=leftLead?.115*(a.weapons.find(w=>w.side==='Left')?.length||.61)/.61:GRIP_SPACING;
   for(const side of leftLead?['Left','Right']:['Right','Left']){
    const isRight=side==='Right',hp=isRight?q.hR:q.hL,ep=isRight?q.eR:q.eL,bd=isRight?q.bR:q.bL;
    const leading=side!==supportSide,sign=leftLead?-1:1;
@@ -724,7 +898,7 @@ export class PlayerMotion{
     const w=this.gripWeight*carry;
     target.lerp(this.W(sign*(q.hR[0]-.21),q.hR[1]+.13,q.hR[2]+.14),w);
     const pitch=lerp(.38,-.12,ss(this.speed,3.3,5.4));
-    if(!state.guard)d.lerp(V(sign*.20,pitch,-1).normalize().applyAxisAngle(YA,yaw),w).normalize();
+    if(!state.guard)d.lerp(V(sign*.58,pitch,-1).normalize().applyAxisAngle(YA,yaw),w).normalize();
     // Keep the same thrust timing and point direction, but constrain the
     // handle to the intersecting reach of both shoulders while it is gripped.
     const support=this.bone(supportSide+'Arm').getWorldPosition(V()).addScaledVector(d,gripSpacing);

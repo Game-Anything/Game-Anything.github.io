@@ -323,17 +323,17 @@ export function buildGate({scene,gateStone,ground,phase,adaptive=false}){
         float crust=grit(bankPoint*vec3(2.1,2.8,1.9)+2.*bed);
         float sand=grit(bankPoint*6.4);
         float scale=1.-smoothstep(.48,1.7,length(fwidth(bankPoint)));
-        float bedLight=.58+.76*bed+scale*(.46*(crust-.5)+.20*(sand-.5));
-        diffuseColor.rgb*=bedLight*mix(.78,1.62,gatePhase);
+        float bedLight=.61+.70*bed+scale*(.34*(crust-.5)+.12*(sand-.5));
+        diffuseColor.rgb*=bedLight*mix(.77,1.14,gatePhase);
         float powder=smoothstep(.46,.79,bed*.54+crust*.46);
         diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*1.24+vec3(.006,.006,.005),powder);`);
       shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
-        float relief=.32*bed+scale*(.14*crust+.027*sand);
+        float relief=.24*bed+scale*(.089*crust+.013*sand);
         vec3 gx=dFdx(-vViewPosition),gy=dFdy(-vViewPosition),u=cross(gy,normal),v=cross(normal,gx);
         float jac=dot(gx,u);
         normal=normalize(max(abs(jac),1e-8)*normal-sign(jac)*(dFdx(relief)*u+dFdy(relief)*v));`);
       shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
-        outgoingLight+=mix(vec3(.006,.006,.005),vec3(.078,.067,.044),gatePhase)*(.64+.54*bed);
+        outgoingLight+=mix(vec3(.006,.006,.005),vec3(.038,.030,.021),gatePhase)*(.64+.54*bed);
         #include <opaque_fragment>`);
     };
     const skin=new T.Mesh(g,talus);skin.name='gate-hill-skin';skin.receiveShadow=true;skin.castShadow=false;group.add(skin);

@@ -89,7 +89,7 @@ export function dressGravityRock(group,texture,index){
   group.userData.dress={halo,smoke,uniforms,core,baseEmission:core.material.emissive.clone().multiplyScalar(core.material.emissiveIntensity),wake,wakeUniforms,history,sampleTimes:new Float64Array(history.length),head:0,count:0,lastTime:-1};
 }
 
-export function updateRockDress(group,projectile,time,castAge,formation,liftAge,firstPhase=false){
+export function updateRockDress(group,projectile,time,castAge,formation,liftAge,firstPhase=false,cameraPosition){
   const d=group.userData.dress;if(!d)return;
   if(time-d.lastTime>(firstPhase?.26:.15)||time<d.lastTime){d.head=0;d.count=0;}
   if(time!==d.lastTime){
@@ -124,6 +124,18 @@ export function updateRockDress(group,projectile,time,castAge,formation,liftAge,
   // The source stones swell as they close: about 3 m across beside the player.
   const scale=projectile.launched?1.12+.62*smooth(f,0,.8):Math.max(.001,formation);
   group.scale.setScalar(scale);
+  // The cast brings solid rock through the lens during close lock-on shots.
+  // Fade its opaque surface while the electrical shell and the projectile travel on.
+  const clearance=cameraPosition?cameraPosition.distanceTo(group.position)-1.15*scale:Infinity;
+  const coverage=smooth(clearance,.95,2.45);
+  d.core.visible=coverage>0;
+  d.core.material.opacity=coverage;
+  const translucent=coverage<1;
+  if(d.core.material.transparent!==translucent){
+    d.core.material.transparent=translucent;
+    d.core.material.depthWrite=!translucent;
+    d.core.material.needsUpdate=true;
+  }
   d.uniforms.time.value=time;
   d.uniforms.size.value=2.35*scale*(1+.045*Math.sin(time*9+projectile.i*1.3));
   const eruption=formation*(1.-smooth(castAge,3.25,4.5));

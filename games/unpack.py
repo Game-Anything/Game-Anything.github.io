@@ -145,6 +145,11 @@ def main(source, out):
     print("%d files, %.1f MB, from %s into %s" % (len(written), total / 1e6, page_name, out))
     for rel in sorted(stale):
         print("not in this build:", rel)
+    # GitHub refuses any file over 100 MB, so such a file has to be re-encoded or left out before a push.
+    for rel in sorted(written):
+        size = os.path.getsize(os.path.join(root, rel))
+        if size > 100 * 1024 * 1024:
+            print("over GitHub's 100 MB limit (%.0f MB): %s" % (size / 1048576, rel))
 
 
 if __name__ == "__main__":

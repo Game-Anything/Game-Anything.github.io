@@ -348,13 +348,21 @@ export class FollowCamera {
     if(distance<.08)lensForward.set(-Math.sin(this.yaw),0,-Math.cos(this.yaw));
     else lensForward.multiplyScalar(1/distance);
     lensRight.set(-lensForward.z,0,lensForward.x);
-    const boom=3.45+.85*(1-T.MathUtils.smoothstep(distance,1,6));
-    shoulderEye.copy(base).addScaledVector(lensForward,-boom).addScaledVector(lensRight,.34);
-    shoulderEye.y=Math.max(base.y+1.16,groundAt(shoulderEye.x,shoulderEye.z)+.42);
-    const runnerAngle=Math.atan2(base.y+1.47-shoulderEye.y,boom);
-    const raisedAngle=Math.atan2(groundAt(boss.x,boss.z)+boss.y+1.70-shoulderEye.y,boom+distance);
-    // Centre the angle between the runner's upper back and the lifted body.
-    const pitch=T.MathUtils.lerp(runnerAngle,raisedAngle,.47);
+    const crown=this.frameBones?.[5]?.bone;
+    if(crown){crown.getWorldPosition(bossChest);bossChest.y+=1.15;}
+    else bossChest.set(boss.x,groundAt(boss.x,boss.z)+boss.y+4.6,boss.z);
+    const halfTan=Math.tan(T.MathUtils.degToRad(cam.fov*.5));
+    const upper=Math.atan(.74*halfTan),lower=Math.atan(.86*halfTan);
+    let boom=4.3,highAngle,lowAngle;
+    for(let pass=0;pass<10;pass++){
+      shoulderEye.copy(base).addScaledVector(lensForward,-boom).addScaledVector(lensRight,.34);
+      shoulderEye.y=Math.max(base.y+1.16,groundAt(shoulderEye.x,shoulderEye.z)+.42);
+      highAngle=Math.atan2(bossChest.y-shoulderEye.y,Math.hypot(bossChest.x-shoulderEye.x,bossChest.z-shoulderEye.z));
+      lowAngle=Math.atan2(base.y+.18-shoulderEye.y,boom);
+      if(highAngle-lowAngle<=upper+lower)break;
+      boom*=1.20;
+    }
+    const pitch=(highAngle-upper+lowAngle+lower)*.5;
     shoulderAim.copy(lensForward).multiplyScalar(Math.cos(pitch));shoulderAim.y=Math.sin(pitch);
     cam.getWorldDirection(d);
     arcBetween.setFromUnitVectors(d,shoulderAim);
@@ -1100,10 +1108,11 @@ export class FollowCamera {
     d.applyQuaternion(identityTurn.identity().slerp(arcBetween,weight));
     cam.position.lerp(shoulderEye,weight);cam.lookAt(a.copy(cam.position).add(d));cam.updateMatrixWorld(true);
   }
-  clearNearBlade(dt,boss,groundAt){
+  clearNearBlade(dt,boss,groundAt,live=false){
     const cam=this.camera;
     let room=0;
-    const chest=this.frameBones?.[6]?.bone;
+    const chest=this.frameBones?.[6]?.bone||boss?.lockBone;
+    const halfFov=Math.tan(T.MathUtils.degToRad(cam.fov*.5));
     if(chest&&boss){
       chest.getWorldPosition(bossChest).applyMatrix4(cam.matrixWorldInverse);
       for(const weapon of boss.weapons){
@@ -1115,13 +1124,20 @@ export class FollowCamera {
           testEye.copy(center).applyMatrix4(weapon.pivot.matrixWorld).applyMatrix4(cam.matrixWorldInverse);
           const depth=-testEye.z, radius=.5*scale*Math.max(size.x,size.z);
           if(depth<-.1||depth>4.2||depth+.30>=-bossChest.z)continue;
+          // A near blade can cover a corner even when its tip misses the reticle.
+          if(live&&depth<1.45&&depth+radius>.08){
+            const halfHeight=Math.max(.08,depth)*halfFov;
+            const edge=Math.max(Math.abs(testEye.x)-halfHeight*cam.aspect,Math.abs(testEye.y)-halfHeight);
+            const onScreen=1-T.MathUtils.smoothstep(edge,radius-.06,radius+.10);
+            room=Math.max(room,onScreen*(1-T.MathUtils.smoothstep(depth,.55,1.45)));
+          }
           const central=Math.hypot(testEye.x,testEye.y*.9)-radius;
           const overlap=1-T.MathUtils.smoothstep(central,.12,.32*Math.max(1,depth)+.22);
           room=Math.max(room,overlap*(1-T.MathUtils.smoothstep(depth,1.65,4.2)));
         }
       }
     }
-    this.bladeRoom+=(room-this.bladeRoom)*rate(room>this.bladeRoom?17:6,dt);
+    this.bladeRoom+=(room-this.bladeRoom)*rate(room>this.bladeRoom?(live?37:17):6,dt);
     if(this.bladeRoom<.005)return;
     cam.getWorldDirection(d);
     cam.position.addScaledVector(d,-1.42*this.bladeRoom);

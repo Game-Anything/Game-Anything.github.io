@@ -1,3 +1,4 @@
+import {createPhaseFilm} from "game/src/phase-film.js";
 import {batchLiveTiles,batchLooseSlabs} from "game/src/static-instances.js";
 import {canLeaveForDodge,queueRecovery,thrustTravel} from "game/src/action-recovery.js";
 import {attachLiveControls,controlLabel} from "game/src/live-controls.js";
@@ -36,10 +37,11 @@ import {FollowCamera} from "game/src/follow-camera.js";
 import {lightPass} from "game/src/consort-lightspeed.js";
 skipInactivePointLights(T.ShaderChunk);
 installAtmosphere();
-const checkpoint=new URLSearchParams(location.search).get('checkpoint')||'radahn-start';
+const checkpoint=new URLSearchParams(location.search).get('checkpoint')||(location.protocol==='file:'?'radahn-fight':'radahn-start');
 const beats=window.__gameBeats=window.__gameBeats||[];const beat=(kind,text)=>beats.push({kind,text});beats.push({kind:'checkpoint',id:checkpoint});
 const scene=new T.Scene();scene.matrixAutoUpdate=false;scene.fog=new T.FogExp2(0x92917a,.012);
 const launchOptions=new URLSearchParams(location.search);
+const nativeCutscene=launchOptions.get('cinematic')==='scene';
 if(!launchOptions.has('quality'))launchOptions.set('quality',launchOptions.get('replay')==='reference'?'ultra':'play');
 const ultra=launchOptions.get('quality')!=='auto';
 const nativeQuality=launchOptions.get('quality')==='native';
@@ -115,6 +117,7 @@ function padSceneLights(){
 const camera=new T.PerspectiveCamera(52,innerWidth/innerHeight,.08,500);
 const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=optimizeBloom(new UnrealBloomPass(new T.Vector2(innerWidth,innerHeight),.14,.34,1.23));composer.addPass(bloom);const gradePass=gradeOutput(new OutputPass(),bloom);gradePass.uniforms.aspect.value=innerWidth/innerHeight;composer.addPass(gradePass);const antialias=new ShaderPass({...FXAAShader,fragmentShader:FXAAShader.fragmentShader.replace('float _SubpixelBlending = 1.0;', 'float _SubpixelBlending = 0.35;')});antialias.uniforms.resolution.value.set(1/(innerWidth*renderer.getPixelRatio()),1/(innerHeight*renderer.getPixelRatio()));composer.addPass(antialias);
 const world=makeWorld(scene,renderer,{ultra,fullShadows:fixedResolution}),hud=new HUD(),fx=new Effects(scene);
+const phaseFilm=createPhaseFilm(hud.canvas);
 const backgroundSplats=addBackgroundSplats(scene,renderer,undefined,ultra,launchOptions.get('replay')!=='reference');
 // Opaque masonry and trunk sections keep identical visible triangles at every live quality.
 if (!fixedResolution || (launchOptions.get('replay')!=='reference' && launchOptions.get('controls')!=='recording')) partitionArenaSurfaces(scene,renderer,()=>fixedResolution);
@@ -148,6 +151,7 @@ const distance=()=>Math.hypot(p.pos.x-b.pos.x,p.pos.z-b.pos.z);
 const facing=(from,to)=>Math.atan2(from.x-to.x,from.z-to.z);
 function clearFlight(reason){const active=!!p.flight;p.flight=null;p.pos.y=0;if(active)combatEvent('flight-cleared',reason);}
 function transition(stage){
+ if(stage!=='phase')phaseFilm.stop();
  if(stage==='combat'&&!fixedResolution&&!recordedControls){
    const entryRatio=Math.max(renderQuality.minimum,(state.phase===2?.76:.90)*Math.min(devicePixelRatio||1,renderQuality.maximum));
    if(renderQuality.ratio>entryRatio){renderQuality.ratio=entryRatio;drawingResizePending=true;}
@@ -1107,6 +1111,7 @@ function resolveBossContact(dt,oldX,oldZ,wasSolid){
 const previousPlayerStep=new T.Vector3(),previousBossStep=new T.Vector3();
 const currentPlayerStep=new T.Vector3(),currentBossStep=new T.Vector3();
 let previousWalkStage=null,previousPlayerYaw=0;
+const entranceWalkHeight=(_x,z)=>world.entranceHeight(z);
 function drawWalkingFrame(dt,now){
   if(recordedControls||previousWalkStage!==state.stage||state.stage!=='combat'||p.flight||
      state.grabbed||cameraSnap||!['walk','run','idle'].includes(p.action)||
@@ -1129,7 +1134,13 @@ function step(dt,present=true){if(!loaded||(!recordedControls&&(state.help||stat
  if(liveAxes.lookX||liveAxes.lookY)turnView(liveAxes.lookX*2.6*dt,liveAxes.lookY*1.85*dt);
  if(!state.locked)cameraYaw+=((keys.has('KeyJ')?1:0)-(keys.has('KeyL')?1:0))*dt*1.65;if(!state.locked)cameraPitch=T.MathUtils.clamp(cameraPitch+((keys.has('KeyI')?1:0)-(keys.has('KeyK')?1:0))*dt*2.2,-.65,.9);
  if(state.stage==='entry'){if(state.stageTime<3.45&&!state.menu){if(state.stageTime<2.6)p.pos.z=Math.max(-1,p.pos.z-dt*.8);p.yaw=lerpAngle(p.yaw,state.stageTime>2.6?Math.PI:0,1-Math.exp(-dt*10));}if(state.stageTime>3.45)state.fade=.22*T.MathUtils.smoothstep(state.stageTime,3.45,3.92);if(state.stageTime>=Math.min(6.15,state.entrySkipAt??Infinity)){state.entrySkipAt=null;transition('combat');state.bossVisible=true;state.locked=!!state.pendingLock;state.pendingLock=false;state.menu=false;world.mist.visible=false;p.pos.set(0,0,-2);p.yaw=0;p.action='idle';b.pos.copy(gateSpawn);b.action='wait';b.elapsed=0;b.duration=.8;beat('objective','Promised Consort Radahn');}}
- if(state.stage==='phase'){state.fade=0;if(state.stageTime>(state.phaseSkipAt??PHASE_CINEMATIC_DURATION+PHASE_CINEMATIC_LEAD)){state.phaseSkipAt=null;state.phase=2;transition('combat');state.revealFrom=state.time;cameraSnap=true;p.pos.set(world.arena.cx,0,world.arena.cz+3);b.pos.copy(p.pos).add(new T.Vector3(0,0,-9.4));b.yaw=facing(b.pos,p.pos);b.action='wait';b.elapsed=0;b.duration=2.1;b.move=0;b.meteorFollowup=0;b.lastAttack=null;b.parries=0;b.stagger=0;b.critical=false;b.criticalReadyAt=0;b.pos.y=0;p.action='idle';cameraYaw=0;beat('objective','Radahn, Consort of Miquella');}}
+ if(state.stage==='phase'){
+  state.fade=0;
+  const filmTime=phaseFilm.clock();
+  if(state.phaseSkipAt==null&&filmTime!=null)state.stageTime=PHASE_CINEMATIC_LEAD+filmTime;
+  const done=state.phaseSkipAt!=null?state.stageTime>state.phaseSkipAt:
+    filmTime!=null?phaseFilm.ended():state.stageTime>PHASE_CINEMATIC_DURATION+PHASE_CINEMATIC_LEAD;
+  if(done){state.phaseSkipAt=null;state.phase=2;transition('combat');state.revealFrom=state.time;cameraSnap=true;p.pos.set(world.arena.cx,0,world.arena.cz+3);b.pos.copy(p.pos).add(new T.Vector3(0,0,-9.4));b.yaw=facing(b.pos,p.pos);b.action='wait';b.elapsed=0;b.duration=2.1;b.move=0;b.meteorFollowup=0;b.lastAttack=null;b.parries=0;b.stagger=0;b.critical=false;b.criticalReadyAt=0;b.pos.y=0;p.action='idle';cameraYaw=0;beat('objective','Radahn, Consort of Miquella');}}
  if(state.stage==='dying'){
    b.pos.y=0;
    const pulse=Math.floor((state.stageTime-.86)/.23);
@@ -1162,7 +1173,26 @@ function step(dt,present=true){if(!loaded||(!recordedControls&&(state.help||stat
  if(canMove){const mv=moveVector();if(p.flight){const f=p.flight;f.elapsed+=dt;const desired=mv.clone().multiplyScalar(3.15);f.velocity.lerp(desired,Math.min(1,dt*2.5));p.pos.addScaledVector(f.velocity,dt);p.pos.y=Math.sin(T.MathUtils.clamp((f.elapsed-(f.windup||0))/(f.duration-(f.windup||0)),0,1)*Math.PI)*(f.height||.95);if(!recordedControls && p.action==='jump' && p.buffer?.onTakeoff && f.elapsed>=f.windup){
   const next=p.buffer;p.buffer=null;consumeBuffered(next);
 }
-if(f.elapsed>=f.duration){p.flight=null;p.pos.y=0;}}const free=['idle','walk','run'].includes(p.action);if(free&&p.pendingWeapon!=null){state.weapon=p.pendingWeapon;p.pendingWeapon=null;if(!recordedControls)refreshSkill();}if(free&&!p.flight){if(mv.lengthSq()){const sprint=keys.has('KeyE')&&eDown>=0&&state.time-eDown>=SPRINT_HOLD&&state.stamina>4&&!p.sprintExhausted;const speed=state.crouched||keys.has('Walk')?1.25:sprint?5.6:3.15;p.velocity.lerp(mv.clone().multiplyScalar(speed),1-Math.exp(-dt*24));p.pos.addScaledVector(p.velocity,dt);p.action=sprint?'run':'walk';if(sprint){state.stamina=Math.max(0,state.stamina-dt*SPRINT_DRAIN_PER_SECOND);p.staminaDelay=.5;if(state.stamina<=4)p.sprintExhausted=true;}if(!state.locked)p.yaw=lerpAngle(p.yaw,Math.atan2(-mv.x,-mv.z),Math.min(1,dt*12));}else{p.velocity.multiplyScalar(Math.exp(-dt*28));p.pos.addScaledVector(p.velocity,dt);p.action='idle';}}
+if(f.elapsed>=f.duration){p.flight=null;p.pos.y=0;}}const free=['idle','walk','run'].includes(p.action);if(free&&p.pendingWeapon!=null){state.weapon=p.pendingWeapon;p.pendingWeapon=null;if(!recordedControls)refreshSkill();}if(free&&!p.flight){if(mv.lengthSq()){const sprint=keys.has('KeyE')&&eDown>=0&&state.time-eDown>=SPRINT_HOLD&&state.stamina>4&&!p.sprintExhausted;const speed=state.crouched||keys.has('Walk')?1.25:sprint?5.6:recordedControls?3.15:2.15;if(recordedControls){
+ p.velocity.lerp(mv.clone().multiplyScalar(speed),1-Math.exp(-dt*24));p.pos.addScaledVector(p.velocity,dt);
+}else{
+ const heading=Math.atan2(-mv.x,-mv.z),along=p.velocity.dot(mv);
+ const moving=T.MathUtils.smoothstep(p.velocity.length(),.25,2.8);
+ if(!state.locked)p.yaw=lerpAngle(p.yaw,heading,1-Math.exp(-dt*T.MathUtils.lerp(20,along<0?16:12,moving)));
+ const alignment=state.locked?1:Math.max(0,Math.cos(heading-p.yaw));
+ const goal=mv.clone().multiplyScalar(speed*(.54+.46*alignment));
+ // Brake into a reversal before accelerating off the outside foot. The
+ // analytic displacement also keeps a short key tap consistent with a hold.
+ const rate=along<0?25:sprint?10:T.MathUtils.lerp(20,14,moving),gain=1-Math.exp(-dt*rate);
+ p.pos.addScaledVector(goal,dt).addScaledVector(p.velocity,gain/rate).addScaledVector(goal,-gain/rate);
+ p.velocity.lerp(goal,gain);
+}
+p.action=sprint?'run':'walk';if(sprint){state.stamina=Math.max(0,state.stamina-dt*SPRINT_DRAIN_PER_SECOND);p.staminaDelay=.5;if(state.stamina<=4)p.sprintExhausted=true;}if(recordedControls&&!state.locked)p.yaw=lerpAngle(p.yaw,Math.atan2(-mv.x,-mv.z),Math.min(1,dt*12));
+}else{
+ if(recordedControls){p.velocity.multiplyScalar(Math.exp(-dt*28));p.pos.addScaledVector(p.velocity,dt);}
+ else{const gain=1-Math.exp(-dt*23);p.pos.addScaledVector(p.velocity,gain/23);p.velocity.multiplyScalar(1-gain);}
+ p.action=!recordedControls&&p.velocity.lengthSq()>.025?'walk':'idle';
+}}
  if(!free){
    const winding=!recordedControls&&p.action==='heavy'&&!p.guardCounter&&!p.airStrike&&keys.has('KeyV');
    const hold=winding?Math.min(Math.max(0,p.elapsed+dt-.25),dt,Math.max(0,.65-(p.chargeSeconds||0))):0;
@@ -1234,7 +1264,18 @@ if(f.elapsed>=f.duration){p.flight=null;p.pos.y=0;}}const free=['idle','walk','r
  }
  state.prompt=['mist','return'].includes(state.stage)&&p.pos.distanceTo(new T.Vector3(0,0,2))<3?mistPrompt():'';
 }
-function render(dt){let nearMask=0;renderedFrames++;lastRenderedAt=performance.now();const bossDissolved=state.stage==='dying'&&state.stageTime>=4.95;renderer.info.reset();if(['walk','run'].includes(p.action)&&!p.flight){const travel=p.pos.distanceTo(stepPosition);if(travel<2)stepDistance+=travel;const stride=p.action==='run'?1.65:1.18;if(stepDistance>stride){stepDistance%=stride;playSound('step',p.action==='run'?1:.6);}}else stepDistance=0;stepPosition.copy(p.pos);flameAura.visible=(state.flameUntil>state.time||p.action==='cast'&&p.elapsed>.5)&&!['dead','loading'].includes(state.stage);const freshBuff=T.MathUtils.clamp(((state.flameUntil||0)-state.time-27)/3,0,1),buffGlow=p.action==='cast'?Math.sin(Math.PI*p.elapsed/p.duration):freshBuff;flameAura.material.opacity=.07+.5*buffGlow;flameAura.material.size=.07+.13*buffGlow;if(flameAura.visible){flameAura.position.copy(p.pos);const a=flameGeometry.attributes.position;for(let i=0;i<a.count;i++){const y=(i/96*1.9+state.time*.65)%1.9,angle=i*2.39996+state.time*2+y*2,r=.38+.17*Math.sin(i*3);a.setXYZ(i,Math.sin(angle)*r,y,Math.cos(angle)*r);}a.needsUpdate=true;}for(let i=0;i<flameWisps.length;i++){const o=flameWisps[i];o.visible=flameAura.visible;if(!o.visible)continue;o.material.opacity=.06+.4*buffGlow;const angle=state.time*2+i*2.4;o.position.copy(p.pos).add(new T.Vector3(Math.sin(angle)*.37,1+Math.sin(angle*1.4)*.2,Math.cos(angle)*.37));o.scale.set(.6,1.7,1);if(i===3&&player.hand('Right')){player.hand('Right').getWorldPosition(o.position);o.scale.set(.65,.9,1);}}renderer.toneMappingExposure=['mist','return','entry'].includes(state.stage)?.94:.96;state.victoryFlash=state.victory?T.MathUtils.smoothstep(state.stageTime,2.28,5.22)*(1-T.MathUtils.smoothstep(state.stageTime,11.12,12.56)):0;contacts[0].visible=loaded&&state.stage!=='loading'&&(state.stage!=='dead'||state.stageTime<4.2);contacts[0].position.set(p.pos.x,(['mist','return','entry'].includes(state.stage)?world.entranceHeight(p.pos.z):world.groundHeight(p.pos.x,p.pos.z))+.015,p.pos.z);contacts[1].position.set(b.pos.x,world.groundHeight(b.pos.x,b.pos.z)+.015,b.pos.z);contacts[1].visible=state.bossVisible&&!bossHidden()&&!bossDissolved;if(state.victoryFlash>0){
+function render(dt){
+ if(!nativeCutscene&&!comparisonMode&&state.stage==='phase'&&phaseFilm.show(state.stageTime-PHASE_CINEMATIC_LEAD)){
+  lastRenderedAt=performance.now();renderedFrames++;
+  hud.liveSignature=null;hud.updateBars(state);
+  const ctx=hud.ctx;ctx.clearRect(0,0,1280,720);
+  if(state.phaseSkipAt!=null){
+   const fade=T.MathUtils.smoothstep(state.stageTime,state.phaseSkipAt-1.3,state.phaseSkipAt-1.05);
+   ctx.fillStyle='rgba(0,0,0,'+fade+')';ctx.fillRect(0,0,1280,720);
+  }else hud.text(controlLabel(state.inputDevice,'Esc: Skip','Menu: Skip','Options: Skip'),1218,693,13,'#d5d2bd','right');
+  return;
+ }
+ let nearMask=0;renderedFrames++;lastRenderedAt=performance.now();const bossDissolved=state.stage==='dying'&&state.stageTime>=4.95;renderer.info.reset();if(['walk','run'].includes(p.action)&&!p.flight){const travel=p.pos.distanceTo(stepPosition);if(travel<2)stepDistance+=travel;const stride=p.action==='run'?1.65:recordedControls?1.18:.83;if(stepDistance>stride){stepDistance%=stride;playSound('step',p.action==='run'?1:.6);}}else stepDistance=0;stepPosition.copy(p.pos);flameAura.visible=(state.flameUntil>state.time||p.action==='cast'&&p.elapsed>.5)&&!['dead','loading'].includes(state.stage);const freshBuff=T.MathUtils.clamp(((state.flameUntil||0)-state.time-27)/3,0,1),buffGlow=p.action==='cast'?Math.sin(Math.PI*p.elapsed/p.duration):freshBuff;flameAura.material.opacity=.07+.5*buffGlow;flameAura.material.size=.07+.13*buffGlow;if(flameAura.visible){flameAura.position.copy(p.pos);const a=flameGeometry.attributes.position;for(let i=0;i<a.count;i++){const y=(i/96*1.9+state.time*.65)%1.9,angle=i*2.39996+state.time*2+y*2,r=.38+.17*Math.sin(i*3);a.setXYZ(i,Math.sin(angle)*r,y,Math.cos(angle)*r);}a.needsUpdate=true;}for(let i=0;i<flameWisps.length;i++){const o=flameWisps[i];o.visible=flameAura.visible;if(!o.visible)continue;o.material.opacity=.06+.4*buffGlow;const angle=state.time*2+i*2.4;o.position.copy(p.pos).add(new T.Vector3(Math.sin(angle)*.37,1+Math.sin(angle*1.4)*.2,Math.cos(angle)*.37));o.scale.set(.6,1.7,1);if(i===3&&player.hand('Right')){player.hand('Right').getWorldPosition(o.position);o.scale.set(.65,.9,1);}}renderer.toneMappingExposure=['mist','return','entry'].includes(state.stage)?.94:.96;state.victoryFlash=state.victory?T.MathUtils.smoothstep(state.stageTime,2.28,5.22)*(1-T.MathUtils.smoothstep(state.stageTime,11.12,12.56)):0;contacts[0].visible=loaded&&state.stage!=='loading'&&(state.stage!=='dead'||state.stageTime<4.2);contacts[0].position.set(p.pos.x,(['mist','return','entry'].includes(state.stage)?world.entranceHeight(p.pos.z):world.groundHeight(p.pos.x,p.pos.z))+.015,p.pos.z);contacts[1].position.set(b.pos.x,world.groundHeight(b.pos.x,b.pos.z)+.015,b.pos.z);contacts[1].visible=state.bossVisible&&!bossHidden()&&!bossDissolved;if(state.victoryFlash>0){
   fx.impactLight.position.copy(p.pos);fx.impactLight.position.y=world.groundHeight(p.pos.x,p.pos.z)+.68;
   fx.impactLight.intensity=210*state.victoryFlash;
  }
@@ -1283,7 +1324,8 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
  // Grounded runners drop the inside shoulder as a gravity volley or airborne lunge passes.
  const evasiveRun=state.stage==='combat'&&p.action==='run'&&(b.action==='leap'||b.action==='rocks'||b.action==='recover'&&b.lastAttack==='rocks');
  const onEntrance=state.stage==='mist'||state.stage==='return';
- const playerGround=onEntrance?(x,z)=>world.entranceHeight(z):recordedControls?world.groundHeight:world.walkGround;
+ const walkSurface=!recordedControls||p.action==='walk';
+ const playerGround=onEntrance?entranceWalkHeight:walkSurface?world.walkGround:world.groundHeight;
  let riposteContact=null;
  if(p.action==='critical'&&boss.capeMount?.chest){
    const chest=boss.capeMount.chest;
@@ -1294,7 +1336,7 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
      riposteContact.addScaledVector(new T.Vector3(Math.sin(p.yaw),0,Math.cos(p.yaw)),.52);
    }
  }
- player.tick(dt,{riposteContact,pos:p.pos,rollAxisYaw:p.action==='roll'?Math.atan2(-p.rollDir.x,-p.rollDir.z)-playerViewYaw:0,liveLocomotion:!recordedControls||p.action==='run'||p.action==='walk',evasiveRun,sideStep,twoHanded:!recordedControls&&!!state.twoHanded,twoHandedSide:recordedControls?null:state.grip==='left'?'Left':state.grip==='right'?'Right':null,leftEquipped:recordedControls||state.leftEquipped,groundAt:playerGround,walkSurface:!recordedControls,clothGroundAt:onEntrance?playerGround:world.clothGroundHeight,aim:state.locked&&state.stage==='combat'?Math.atan2(Math.sin(facing(p.pos,b.pos)-playerViewYaw),Math.cos(facing(p.pos,b.pos)-playerViewYaw)):0,groundOffset:(['mist','return'].includes(state.stage)?0:(onEntrance?world.groundHeight:playerGround)(p.pos.x,p.pos.z))+(p.action==='backstep'?.15*Math.sin(Math.PI*p.elapsed/p.duration):0),yaw:playerViewYaw,motion:pm,strike:p.action,airStrike:p.airStrike,runningThrust:p.action==='light'&&!!p.runningThrust,rollingThrust:p.action==='light'&&!!p.rollingThrust,lightChain:p.lightChain||1,lightContinued:!!p.lightContinued,counterThrust:!!p.counterThrust,chainQueued:p.buffer?.name==='light'&&p.buffer.until>=state.time,speed:state.stage==='entry'?.40:p.action==='walk'?(state.locked&&moveVector().dot(new T.Vector3(-Math.sin(p.yaw),0,-Math.cos(p.yaw)))<-.35?-1.55:1.55)*T.MathUtils.clamp(p.velocity.length()/3.15,.25,1.1):p.action==='run'?1.3*T.MathUtils.clamp(p.velocity.length()/5.6,.4,1.1):1,strafe:state.locked && !sprintingAcross?Math.atan2(-moveVector().x,-moveVector().z)-playerViewYaw:0,visible:loaded&&!['loading','phase'].includes(state.stage),dissolve:state.stage==='dead'?T.MathUtils.smoothstep(state.stageTime,2.6,4.2):0,fallProgress:state.stage==='dead'?Math.min(1,state.stageTime/2):0,hitYaw:p.hitYaw||0,recoil:['hurt','guard-recoil'].includes(p.action)?Math.pow(Math.sin(Math.PI*Math.min(1,p.elapsed/p.duration)),.5)*(p.action==='guard-recoil'?.4:1):0,weapon:state.weapon,progress:['light','heavy','critical','roll','backstep','jump'].includes(p.action)&&p.duration?p.elapsed/p.duration:undefined,duration:state.stage==='dead'?2:['light','heavy','critical','roll','backstep','jump'].includes(p.action)?p.duration:undefined,actionId:p.attackCount,roll:p.action==='roll'?p.elapsed/p.duration:0,jump:0,jumpFlight:p.flight?.windup?{elapsed:p.flight.elapsed,duration:p.flight.duration,windup:p.flight.windup}:null,crouched:!!state.crouched&&['idle','walk'].includes(p.action),drink:p.action==='drink'?Math.max(.001,p.elapsed/p.duration):0,critical:p.action==='critical'?Math.max(.001,p.elapsed/p.duration):0,attack:['light','heavy','critical'].includes(p.action)?p.elapsed/p.duration:0,cast:p.action==='cast'?p.elapsed/p.duration:0,castTime:p.action==='cast'?p.elapsed:null,flame:state.flameUntil>state.time,parry:p.action==='parry',parryTime:p.action==='parry'?p.elapsed:null,guard:keys.has('KeyZ')&&['idle','walk'].includes(p.action)},state.time);
+ player.tick(dt,{riposteContact,pos:p.pos,rollAxisYaw:p.action==='roll'?Math.atan2(-p.rollDir.x,-p.rollDir.z)-playerViewYaw:0,liveLocomotion:!recordedControls||p.action==='run'||p.action==='walk',evasiveRun,sideStep,twoHanded:!recordedControls&&!!state.twoHanded,twoHandedSide:recordedControls?null:state.grip==='left'?'Left':state.grip==='right'?'Right':null,leftEquipped:recordedControls||state.leftEquipped,groundAt:playerGround,walkSurface,clothGroundAt:onEntrance?playerGround:world.clothGroundHeight,aim:state.locked&&state.stage==='combat'?Math.atan2(Math.sin(facing(p.pos,b.pos)-playerViewYaw),Math.cos(facing(p.pos,b.pos)-playerViewYaw)):0,groundOffset:(['mist','return'].includes(state.stage)?0:(onEntrance?world.groundHeight:playerGround)(p.pos.x,p.pos.z))+(p.action==='backstep'?.15*Math.sin(Math.PI*p.elapsed/p.duration):0),yaw:playerViewYaw,motion:pm,strike:p.action,airStrike:p.airStrike,runningThrust:p.action==='light'&&!!p.runningThrust,rollingThrust:p.action==='light'&&!!p.rollingThrust,lightChain:p.lightChain||1,lightContinued:!!p.lightContinued,counterThrust:!!p.counterThrust,chainQueued:p.buffer?.name==='light'&&p.buffer.until>=state.time,speed:state.stage==='entry'?.40:p.action==='walk'?(state.locked&&moveVector().dot(new T.Vector3(-Math.sin(p.yaw),0,-Math.cos(p.yaw)))<-.35?-1.55:1.55)*T.MathUtils.clamp(p.velocity.length()/3.15,.25,1.1):p.action==='run'?1.3*T.MathUtils.clamp(p.velocity.length()/5.6,.4,1.1):1,strafe:state.locked && !sprintingAcross?Math.atan2(-moveVector().x,-moveVector().z)-playerViewYaw:0,visible:loaded&&!['loading','phase'].includes(state.stage),dissolve:state.stage==='dead'?T.MathUtils.smoothstep(state.stageTime,2.6,4.2):0,fallProgress:state.stage==='dead'?Math.min(1,state.stageTime/2):0,hitYaw:p.hitYaw||0,recoil:['hurt','guard-recoil'].includes(p.action)?Math.pow(Math.sin(Math.PI*Math.min(1,p.elapsed/p.duration)),.5)*(p.action==='guard-recoil'?.4:1):0,weapon:state.weapon,progress:['light','heavy','critical','roll','backstep','jump'].includes(p.action)&&p.duration?p.elapsed/p.duration:undefined,duration:state.stage==='dead'?2:['light','heavy','critical','roll','backstep','jump'].includes(p.action)?p.duration:undefined,actionId:p.attackCount,roll:p.action==='roll'?p.elapsed/p.duration:0,jump:0,jumpFlight:p.flight?.windup?{elapsed:p.flight.elapsed,duration:p.flight.duration,windup:p.flight.windup}:null,crouched:!!state.crouched&&['idle','walk'].includes(p.action),drink:p.action==='drink'?Math.max(.001,p.elapsed/p.duration):0,critical:p.action==='critical'?Math.max(.001,p.elapsed/p.duration):0,attack:['light','heavy','critical'].includes(p.action)?p.elapsed/p.duration:0,cast:p.action==='cast'?p.elapsed/p.duration:0,castTime:p.action==='cast'?p.elapsed:null,flame:state.flameUntil>state.time,parry:p.action==='parry',parryTime:p.action==='parry'?p.elapsed:null,guard:keys.has('KeyZ')&&['idle','walk'].includes(p.action)},state.time);
  // On a parried knee the pelvis settles toward the attacker while the planted leg carries the weight.
  const kneelTurn=b.action==='critical'?.92:b.action==='recover'&&b.critical?T.MathUtils.smoothstep(b.elapsed,.10,.72)*.92:b.postCritical?.92*(1-T.MathUtils.smoothstep(b.elapsed,0,.58)):0;
  const facingCorrection=T.MathUtils.clamp(Math.atan2(Math.sin(facing(b.pos,p.pos)-b.yaw),Math.cos(facing(b.pos,p.pos)-b.yaw)),-.78,.78);
@@ -1316,7 +1358,7 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
      bossPosePos=b.pos.clone().addScaledVector(away.normalize(),w*(reach-d));
    }
  }
- boss.tick(dt,{targetYaw:b.action==='rocks'?facing(b.pos,p.pos):undefined,groundAt:world.groundHeight,pos:state.stage==='phase'?cinematicMark:bossPosePos,groundOffset:state.stage==='phase'?world.groundHeight(cinematicMark.x,cinematicMark.z):b.pos.z<-60?0:world.groundHeight(b.pos.x,b.pos.z),yaw:state.stage==='phase'?cinematicBlock.yaw:posedYaw,motion:state.stage==='phase'||state.stage==='dying'?'idle':bp,bossAction:state.stage==='dying'?'defeated':state.stage==='phase'?'cinematic':landingFromHover?'nova':landingFromRush?'leap':b.action,bossElapsed:landingFromHover?7.3+b.elapsed:landingFromRush?3.5+b.elapsed:b.elapsed,phaseTime:state.stage==='phase'?state.stageTime:null,holyRecover:state.phase===2&&b.action==='recover'&&!b.stagger&&!b.critical&&b.lastAttack==='promised'&&b.hitIndex===MOVES.promised.contacts.length?b.elapsed:null,crossFromPromised:b.crossFromPromised,crossFromRiposte:b.crossFromRiposte,longTail,crossLow:!!b.crossLow,rushToCross:!!b.rushToCross,phase:state.phase,grabRecovery:state.stage==='combat'&&!state.grabbed&&!b.stagger&&!b.critical&&state.time-b.grabMissAt<2.2&&['grab','stompGrab','recover','approach','cross','ring'].includes(b.action)?{elapsed:state.time-b.grabMissAt,chained:b.grabMissChained}:null,postCritical:state.stage==='combat'&&b.action==='recover'&&b.postCritical?b.elapsed:null,ringRecovery:state.stage==='combat'&&!b.stagger&&!b.critical&&b.action==='recover'&&b.lastAttack==='ring'?b.elapsed:null,openingImpactAge,openingRush:state.phase===1&&b.move===1,groundedRush:state.phase===1&&b.move>1,meteorCancelled:!!b.meteorCancelled,rockFollowup:b.action==='lightspeed'&&b.meteorFollowup===3,deathElapsed:state.stage==='dying'?state.stageTime:null,dissolve:state.stage==='dying'?.035*T.MathUtils.smoothstep(state.stageTime,2.6,4.30)+.965*T.MathUtils.smoothstep(state.stageTime,4.35,4.80):0,fallProgress:state.stage==='dying'?Math.min(1,state.stageTime/1.7):0,speed:b.speed>4.2?1.3:1.25,deflection:b.action==='recover'&&!b.postCritical?b.deflection:null,stagger:b.stagger,critical:b.critical,grab:b.action==='grab'||b.action==='stompGrab'&&b.elapsed>1.8,progress:undefined,duration:1.7,actionId:b.move*10+b.hitIndex,dormant:(!state.bossVisible&&['mist','return','entry'].includes(state.stage))||state.stage==='victory',visible:state.bossVisible&&state.stage!=='victory'&&!bossHidden()&&!bossDissolved,attack:!!MOVES[b.action]?b.elapsed/b.duration:0},state.time);
+ boss.tick(dt,{targetYaw:b.action==='rocks'?facing(b.pos,p.pos):undefined,groundAt:world.groundHeight,pos:state.stage==='phase'?cinematicMark:bossPosePos,groundOffset:state.stage==='phase'?world.groundHeight(cinematicMark.x,cinematicMark.z):b.pos.z<-60?0:world.groundHeight(b.pos.x,b.pos.z),yaw:state.stage==='phase'?cinematicBlock.yaw:posedYaw,motion:state.stage==='phase'||state.stage==='dying'?'idle':bp,bossAction:state.stage==='dying'?'defeated':state.stage==='phase'?'cinematic':landingFromHover?'nova':landingFromRush?'leap':b.action,bossElapsed:landingFromHover?7.3+b.elapsed:landingFromRush?3.5+b.elapsed:b.elapsed,phaseTime:state.stage==='phase'?Math.max(0,state.stageTime-PHASE_CINEMATIC_LEAD):null,holyRecover:state.phase===2&&b.action==='recover'&&!b.stagger&&!b.critical&&b.lastAttack==='promised'&&b.hitIndex===MOVES.promised.contacts.length?b.elapsed:null,crossFromPromised:b.crossFromPromised,crossFromRiposte:b.crossFromRiposte,longTail,crossLow:!!b.crossLow,rushToCross:!!b.rushToCross,phase:state.phase,grabRecovery:state.stage==='combat'&&!state.grabbed&&!b.stagger&&!b.critical&&state.time-b.grabMissAt<2.2&&['grab','stompGrab','recover','approach','cross','ring'].includes(b.action)?{elapsed:state.time-b.grabMissAt,chained:b.grabMissChained}:null,postCritical:state.stage==='combat'&&b.action==='recover'&&b.postCritical?b.elapsed:null,ringRecovery:state.stage==='combat'&&!b.stagger&&!b.critical&&b.action==='recover'&&b.lastAttack==='ring'?b.elapsed:null,openingImpactAge,openingRush:state.phase===1&&b.move===1,groundedRush:state.phase===1&&b.move>1,meteorCancelled:!!b.meteorCancelled,rockFollowup:b.action==='lightspeed'&&b.meteorFollowup===3,deathElapsed:state.stage==='dying'?state.stageTime:null,dissolve:state.stage==='dying'?.035*T.MathUtils.smoothstep(state.stageTime,2.6,4.30)+.965*T.MathUtils.smoothstep(state.stageTime,4.35,4.80):0,fallProgress:state.stage==='dying'?Math.min(1,state.stageTime/1.7):0,speed:b.speed>4.2?1.3:1.25,deflection:b.action==='recover'&&!b.postCritical?b.deflection:null,stagger:b.stagger,critical:b.critical,grab:b.action==='grab'||b.action==='stompGrab'&&b.elapsed>1.8,progress:undefined,duration:1.7,actionId:b.move*10+b.hitIndex,dormant:(!state.bossVisible&&['mist','return','entry'].includes(state.stage))||state.stage==='victory',visible:state.bossVisible&&state.stage!=='victory'&&!bossHidden()&&!bossDissolved,attack:!!MOVES[b.action]?b.elapsed/b.duration:0},state.time);
 
  fx.followCold(bossImpactPosition);
  playerAura.visible=player.root.visible&&state.stage==='combat'&&(state.life===1||state.flameUntil>state.time);
@@ -1417,10 +1459,10 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
    const inPortrait=state.stage==='phase';
    // Tip the torso from the nape: the chest comes against the upper back
    // while the pelvis and the hanging robe settle behind the pauldrons.
-   const lean=(inPortrait?-.08:-.235)*mounted,cs=Math.cos(lean),sn=Math.sin(lean);
-   riderSeatShift.makeRotationX(lean).setPosition((inPortrait?.75:.64)*mounted,
-    (inPortrait?.68:.43)*mounted+4.24*(1-cs)+.34*sn,
-    (inPortrait?-.09:.28)*mounted+.34*(1-cs)-4.24*sn);
+   const lean=(inPortrait?-.08:-.26)*mounted,cs=Math.cos(lean),sn=Math.sin(lean);
+   riderSeatShift.makeRotationX(lean).setPosition((inPortrait?.75:.46)*mounted,
+    (inPortrait?.68:.25)*mounted+4.24*(1-cs)+.34*sn,
+    (inPortrait?-.09:.23)*mounted+.34*(1-cs)-4.24*sn);
    goldenHair.matrix.copy(boss.capeMount.chest.matrixWorld).multiply(boss.chestBindInverse).multiply(riderSeatShift);
    goldenHair.matrixWorldNeedsUpdate=true;
   }else{
@@ -1721,9 +1763,10 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
     camera.position.y=Math.max(camera.position.y,world.groundHeight(camera.position.x,camera.position.z)+.4);
     camera.updateMatrixWorld(true);
   }
-  if((followingFight||watchDefeat)&&boss.root.visible&&!outside){
-    viewRig.clearNearBlade(dt,boss,world.groundHeight);
-  }else viewRig.bladeRoom=0;
+  if(!liveTracking){
+    if((followingFight||watchDefeat)&&boss.root.visible&&!outside)viewRig.clearNearBlade(dt,boss,world.groundHeight);
+    else viewRig.bladeRoom=0;
+  }
   if(followingFight&&state.phase===2&&b.action==='cross'){
     const held=T.MathUtils.smootherstep(b.elapsed,.02,.33)*(1-T.MathUtils.smootherstep(b.elapsed,1.26,1.56));
     viewRig.frameHighGuard(held,world.groundHeight);
@@ -1877,6 +1920,11 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
       }
     }
   }
+  if(liveTracking){
+    if(!outside&&boss.root.visible&&(state.stage==='combat'||watchDefeat)){
+      viewRig.clearNearBlade(dt,boss,world.groundHeight,true);
+    }else viewRig.bladeRoom=0;
+  }
   const starfallDrag=b.action==='meteor'&&b.elapsed>METEOR_SEQUENCE.plant+.05&&b.elapsed<METEOR_SEQUENCE.takeoff+.34;
   const rakeEnd=state.phase===1?ROCK_SEQUENCE.liftOff+.07:2.86;
   const rakingFloor=state.stage==='combat'&&b.pos.y<.64&&(starfallDrag||(b.action==='rocks'&&rakeAge>1.72&&rakeAge<rakeEnd));
@@ -1917,7 +1965,7 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
       const origin=bladeScrapes[0].trace.userData.lastContact;
       if(origin&&state.time-origin.t<1.6)dustPoint.lerp(origin.p,burst*.77);
       dustDrift.y+=burst*5.5;
-      scrapeDust.userData.chips(dustPoint,dustDrift,b.pos.y>.5?(returnVault?19:65):22,state.time,burst);
+      scrapeDust.userData.chips(dustPoint,dustDrift,b.pos.y>.5?(returnVault?32:65):22,state.time,burst);
       if(burst>.04)scrapeDust.userData.puff(dustPoint,dustDrift,state.time,burst,returnVault);
     }
   }
@@ -1954,7 +2002,11 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
    const liftAt=(state.phase===1?ROCK_SEQUENCE.liftOff-.39:ROCK_SEQUENCE.rise-.27)+(i%4)*.033;
    const formation=T.MathUtils.smoothstep(b.elapsed,liftAt,liftAt+.34);
    visual.visible=state.stage==='combat'&&!!rock&&!rock.done&&(rock.launched||b.action==='rocks'&&formation>0);
-   if(visual.visible){updateGravityRock(visual,rock,state.time,camera,b.action==='rocks'?b.pos:null,b.elapsed,formation);updateRockDress(visual,rock,state.time,b.action==='rocks'?b.elapsed:99,formation,state.phase===1?ROCK_SEQUENCE.liftOff:ROCK_SEQUENCE.rise+.12,state.phase===1);}
+   if(visual.visible){
+     updateGravityRock(visual,rock,state.time,camera,b.action==='rocks'?b.pos:null,b.elapsed,formation);
+     updateRockDress(visual,rock,state.time,b.action==='rocks'?b.elapsed:99,formation,
+       state.phase===1?ROCK_SEQUENCE.liftOff:ROCK_SEQUENCE.rise+.12,state.phase===1,camera.position);
+   }
   }
   if(state.locked){const v=(lockable?lockPoint.clone():b.pos.clone().add(new T.Vector3(0,2.5,0))).project(camera);state.lockScreen={x:(v.x*.5+.5)*1280,y:(-.5*v.y+.5)*720};}
   fill.color.copy(fillDay).lerp(fillDusk,world.phaseBlend);
@@ -2007,6 +2059,8 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
     b.postCritical?1-T.MathUtils.smoothstep(b.elapsed,.15,.70):0;
   world.cameraOcclusion(camera.position,p.pos,!intro&&!cinematic,Math.max(clearFeet,lowSight));fx.setView(camera.position,p.pos.clone().add(new T.Vector3(0,p.action==='roll'?.65:1.10,0)));backgroundSplats.setPhase(world.phaseBlend);
   gradePass.uniforms.phase.value=world.phaseBlend;
+  const liftTime=state.stageTime-PHASE_CINEMATIC_LEAD;
+  gradePass.uniforms.kneelingPortrait.value=state.stage==='phase'&&liftTime>=1163/60&&liftTime<1582/60?1:0;
   if(!intro&&!cinematic){
     camera.getWorldDirection(framingPoint);
     const k=world.phaseBlend;
@@ -2036,8 +2090,9 @@ world.mist.material.uniforms.fade.value=state.stage==='entry'?1-T.MathUtils.smoo
       const spellGlare=constrainedShadows&&state.phase===2&&(b.action==='ring'||b.action==='nova');
       const period=spellGlare?T.MathUtils.clamp(liveRenderMs*2.8,70,110):
         Math.max(1000/(constrainedShadows?30:60),Math.min(60,liveRenderMs*1.9));
-      shadowDeadline=!shadowDeadline||shadowStage!==state.stage?now+period:
-        shadowDeadline+(1+Math.floor((now+.4-shadowDeadline)/period))*period;
+      // A late shadow draw already sampled the latest pose. Start its budget
+      // here so the following colour frame never repays an overdue shadow.
+      shadowDeadline=now+period;
       shadowStage=state.stage;
     }
   }else renderer.shadowMap.autoUpdate=true;
@@ -2109,9 +2164,9 @@ async function warmCombatMaterials(){
     composer.renderToScreen=false;
     // A small offscreen draw populates the same shader variants and textures.
     // The camera and the directional light stay fixed for all light counts.
+    composer.setPixelRatio(Math.min(renderQuality.ratio,320/Math.max(innerWidth,innerHeight)));
     if(warmLive){
       bloom.fastLive=!fixedResolution;
-      composer.setPixelRatio(Math.min(renderQuality.ratio,320/Math.max(innerWidth,innerHeight)));
       renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
     }
     camera.position.set(-4,2.6,4);camera.lookAt(-2,3,-50);camera.updateMatrixWorld(true);
@@ -2135,7 +2190,7 @@ async function warmCombatMaterials(){
     // Fixed-quality launches precompile their own complete lighting layouts.
     const layouts=warmLive&&!fixedResolution?[4]:Array.from({length:(maximum-8)/4+1},(_,i)=>8+i*4);
     for(const count of layouts){
-      loadingText.textContent=`Preparing lighting and combat effects (${count} lights)ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`;
+      loadingText.textContent=`Preparing lighting and combat effects (${count} lights)...`;
       for(let i=0;i<lights.length;i++)lights[i].visible=i<count;
       renderer.setRenderTarget(composer.readBuffer);
       await renderer.compileAsync(scene,camera);
@@ -2143,9 +2198,9 @@ async function warmCombatMaterials(){
     }
   }
   finally{
+    composer.setPixelRatio(renderQuality.ratio);
     if(warmLive){
       bloom.fastLive=!fixedResolution;
-      composer.setPixelRatio(renderQuality.ratio);
       renderer.shadowMap.autoUpdate=shadowAuto;renderer.shadowMap.needsUpdate=true;
     }
     composer.renderToScreen=toScreen;renderer.setRenderTarget(previous);
@@ -2199,6 +2254,11 @@ async function loadEncounter() {
   eDown = -1;
   loaded = true;
   state.prompt = mistPrompt();
+  if((checkpoint==='radahn-fight'||checkpoint==='radahn-entry')&&!recordedControls){
+    transition('entry');
+    state.entrySkipAt=checkpoint==='radahn-entry'?null:0;
+    state.prompt='';
+  }
   render(0);
   last = lastRender = performance.now();
   inputTimeline.reset(last);
@@ -2268,7 +2328,7 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 else renderQuality.setMaximum(playPixelRatio());drawingResizePending=true;});camera.position.set(0,2.15,4.8);
 // Read-only diagnostics used by isolated verification; no state mutation or autoplay hook.
 window.gameStatus=(options={})=>({thrustVariant:p.action==='light'?(p.runningThrust?'running':p.rollingThrust?'rolling':'standing'):null,grip:state.grip,currentLayout:!!state.currentLayout,pouchHeld:state.pouchHeld,arenaMap:state.arenaMap,physick:state.physick,leftEquipped:state.leftEquipped,chargeSeconds:p.chargeSeconds||0,guardCounter:!!p.guardCounter,bleed:state.bleed,bloodflame:state.bloodflame,marked:state.marked,grabbed:!!state.grabbed,life:state.life,deaths:state.deaths,deathHistory:deathHistory.map(e=>({...e})),meteorCooldown:Math.max(0,180-(state.time-b.lastMeteor)),grabCooldown:Math.max(0,GRAB_COOLDOWN-(state.time-b.lastGrab)),bossMax:state.bossMax,frost:b.frost,frostProcs:b.frostProcs,frostRemaining:Math.max(0,b.frostUntil-state.time),hazards:hazards.length,projectiles:projectiles.filter(r=>!r.done).length,held:[...keys],buffered:!!p.buffer,queuedAction:p.buffer?.name||null,lightChain:p.lightChain||0,counterThrust:!!p.counterThrust,combatEvents:combatEvents.map(e=>({...e})),yaw:p.yaw,bossYaw:b.yaw,bossHeight:b.pos.y,bossSpeed:b.speed||0,bossMotion:boss.lastMotion,gaitTurn:player.gaitTurn||0,gaitBones:player.gaitAdjustments?.length||0,cameraForward:camera.getWorldDirection(new T.Vector3()).toArray(),parries:b.parries,stagger:b.stagger,attackCount:p.attackCount,sprintExhausted:!!p.sprintExhausted,lastEHold:p.lastEHold??null,cameraPitch,playerHeight:p.pos.y,airborne:!!p.flight,flightElapsed:p.flight?.elapsed||0,actionElapsed:p.elapsed,playerHelmet:player.helmet?.shell.quaternion.toArray(),stage:state.stage,stageTime:state.stageTime,phase:state.phase,fp:state.fp,flameRemaining:Math.max(0,(state.flameUntil||0)-state.time),hp:state.hp,bossHp:state.bossHp,stamina:state.stamina,flasks:state.flasks,menu:state.menu,locked:state.locked,player:[p.pos.x,p.pos.z],boss:[b.pos.x,b.pos.z],action:p.action,bossAction:b.action,bossElapsed:b.elapsed,bossTarget:b.target.toArray(),meteorCancelled:!!b.meteorCancelled,hazardDetails:hazards.map(h=>({reason:h.reason,pos:h.pos.toArray(),radius:h.radius,yaw:h.yaw,arc:h.arc,delay:h.delay,life:h.life,hit:!!h.hit})),weapon:state.weapon,item:state.item,skill:state.skill,crouched:state.crouched||false,menuSelection:state.menuSelection,inputDevice:state.inputDevice,twoHanded:!!state.twoHanded,help:!!state.help,time:state.time,loaded,muted:!!encounterAudio.muted,reward:state.reward,rewardAcknowledged:!!state.rewardAcknowledged,audioState:encounterAudio.context?.state||'unavailable',victory:state.victory,bossBounds:new T.Box3().setFromObject(boss.root,!!options.preciseBounds).getSize(new T.Vector3()).toArray(),camera:camera.position.toArray(),renderStats:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries}});
-let portraitChapterPending=checkpoint==='phase-portrait';
+let portraitChapterPending=checkpoint==='phase-portrait'||checkpoint==='phase-film';
 function advance(now){
  if(!loaded){inputTimeline.reset(now);return;}
  if(portraitChapterPending){
@@ -2276,7 +2336,7 @@ function advance(now){
    state.bossVisible=true;state.bossHp=state.bossMax*.59;state.prompt='';
    p.pos.set(0,0,-8); b.pos.copy(CINEMATIC_BOSS_POSITION);
    enterPhaseCinematic();
-   state.stageTime=PHASE_CINEMATIC_LEAD+61;
+   state.stageTime=checkpoint==='phase-portrait'?PHASE_CINEMATIC_LEAD+61:0;
    world.settlePhase(2,b.pos);
  }
  inputTimeline.advance(now,step,applyInput,!recordedControls);
@@ -2286,9 +2346,41 @@ function advance(now){
 const requestedHz=Number(launchOptions.get('fps'));
 const livePresentationHz=[30,60,90,120,144,165,240].includes(requestedHz)?requestedHz:null;
 let liveSampleStart=0,liveIntervals=0,liveDrawHz=null;
+let graphicsPaused=false,recoveryNotice=null,graphicsLostAt=0;
+renderer.domElement.addEventListener('webglcontextlost',event=>{
+ event.preventDefault();
+ graphicsPaused=true;
+ graphicsLostAt=performance.now();
+ if(!recordedControls&&loaded)applyInput({type:'clear'});
+ if(!recoveryNotice){
+  recoveryNotice=document.createElement('div');
+  recoveryNotice.setAttribute('role','status');
+  recoveryNotice.style.cssText='position:fixed;inset:0;z-index:30;display:grid;place-content:center;background:#242018;color:#decfa7;font:18px Georgia;text-align:center';
+  recoveryNotice.textContent='Restoring graphics…';
+  document.body.append(recoveryNotice);
+ }
+});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{
+ // Three has recreated its GL state. Redraw the same simulation instant
+ // before exposing the canvas or advancing the live input clock again.
+ graphicsPaused=false;
+ renderer.shadowMap.needsUpdate=true;
+ const now=performance.now();
+ if(!recordedControls)inputTimeline.reset(now);
+ else if(!comparisonMode){
+  const elapsed=now-graphicsLostAt;
+  inputTimeline.origin+=elapsed;
+  for(const event of inputTimeline.queue)event.time+=elapsed;
+ }
+ last=lastRender=now;renderNext=0;liveSampleStart=0;liveDrawHz=null;
+ renderQuality.reset();
+ if(loaded){resizeDrawing();render(0);}
+ recoveryNotice?.remove();recoveryNotice=null;
+});
 function frame(now){
- if(!recordedControls&&document.hidden){requestAnimationFrame(frame);return;}
- const current=performance.now();if(loaded)pollControls?.(current);advance(current);
+ if(graphicsPaused||!recordedControls&&document.hidden){requestAnimationFrame(frame);return;}
+ const current=recordedControls?performance.now():now;
+ if(loaded)pollControls?.(current);advance(current);
  const capHz=recordedControls?60:livePresentationHz;
  if(loaded&&(!capHz||!renderNext||now+.5>=renderNext)){
   const dt=Math.min(5,Math.max(0,(current-lastRender)/1000));lastRender=current;
@@ -2318,13 +2410,18 @@ function frame(now){
    referenceShots=shots;
    let replay;
    window.referenceFrame=seconds=>{
-     if(!loaded)return 'loading';
+     if(!loaded||graphicsPaused)return 'loading';
      if(!replay){
        renderQuality.ratio=fixedPixelRatio();resizeDrawing();
        replay=module.referencePlayback({inputs:text.trim().split(/\r?\n/).map(JSON.parse),timeline:inputTimeline,advance,render:(dt,seconds)=>{referenceSeconds=seconds;render(dt);},composer,
          updateMatrices(){scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);}});
      }
-     return replay.show(seconds);
+     const result=replay.show(seconds);
+     if(!nativeCutscene&&result==='ready'&&state.stage==='phase'&&state.phaseSkipAt==null){
+       const sample=phaseFilm.sample(hud.ctx,state.stageTime-PHASE_CINEMATIC_LEAD);
+       if(sample==='seeking')return sample;
+     }
+     return result;
    };
  }).catch(e=>{window.referenceError=String(e)});
 }else requestAnimationFrame(frame);

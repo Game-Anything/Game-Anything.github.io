@@ -334,7 +334,7 @@ export function createGravityHeave(){
     vec3 tangent=(modelViewMatrix*vec4(endPoint+vec3(.01,.55,.01),0.)).xyz;
     vec3 side=cross(tangent,normalize(-v));
     float flash=smoothstep(2.93,3.04,age)*(1.-smoothstep(3.22,3.50,age));
-    v+=side/max(length(side),.001)*q.y*mix((.19+.07*sin(phase))*(1.+.38*flash),.032+.013*cos(phase),filament);
+    v+=side/max(length(side),.001)*q.y*mix((.142+.063*sin(phase))*(1.+.24*flash),.030+.013*cos(phase),filament);
     eyeDistance=-v.z;gl_Position=projectionMatrix*vec4(v,1.);}`,
   fragmentShader:`uniform float age,power;varying vec2 q;varying float filament,eyeDistance,phase;
    void main(){float center=max(0.,1.-abs(q.y));float broken=.5+.5*sin(q.x*31.-age*12.+phase+1.3*sin(q.x*52.+phase));
@@ -345,7 +345,7 @@ export function createGravityHeave(){
     float flash=smoothstep(2.93,3.04,age)*(1.-smoothstep(3.22,3.50,age));
     float scatter=(1.-filament)*flash*pow(center,2.)*(.40+.60*broken);
     vec3 color=mix(mix(vec3(.81,.24,1.74),vec3(1.65,.35,.87),.5+.5*sin(phase)),vec3(2.30,1.53,2.55),max(filament*pow(center,3.),.28*scatter));
-    glow+=scatter*.35;
+    glow=(glow+scatter*.23)*mix(.68+.32*broken,1.,filament);
     gl_FragColor=vec4(color,glow*ends*power*smoothstep(1.8,6.,eyeDistance));}`});
  const mesh=new T.Mesh(geometry,material);mesh.name='ground-to-blade-gravity';mesh.visible=false;mesh.frustumCulled=false;
  mesh.userData.update=(elapsed,start,blade,rocks,firstCast=false)=>{

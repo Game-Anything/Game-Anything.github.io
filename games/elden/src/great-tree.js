@@ -149,10 +149,12 @@ export function buildGreatTree(scene,shared={}){
   const V=(x,y,z)=>{
     const shaft=T.MathUtils.smoothstep(y,-8,44);
     const crotch=T.MathUtils.smoothstep(y,5,44)*(1-T.MathUtils.smoothstep(y,65,109));
-    return new T.Vector3(bx+x,y+12.8*shaft+10.4*crotch,bz+z);
+    // The bole rakes toward the carved pier above the terrace. Carry the
+    // crown with it so the same opening stays visible as the camera turns.
+    return new T.Vector3(bx+x,y+12.8*shaft+10.4*crotch,bz+z+12*T.MathUtils.smoothstep(y,-6,34));
   };
   const trunk=new T.CatmullRomCurve3([V(.8,-42,1),V(0,-12,0),V(-1.1,6,.7),V(-2.2,20,-4.4),V(-2.6,41,-10.8),V(-4.3,59,-14.5),V(-5.0,69,-17.5)]).getPoints(72);
-  tube(trunk,f=>lerp(11.7,5.0,Math.pow(f,.65))*(1+.095*Math.sin(f*17))*(1-.87*T.MathUtils.smoothstep(f,.86,1)),trunkSides,1,.48);
+  tube(trunk,f=>lerp(14.9,6.25,Math.pow(f,.65))*(1+.095*Math.sin(f*17))*(1-.87*T.MathUtils.smoothstep(f,.86,1)),trunkSides,1,.48);
   const tangentA=new T.Vector3(),tangentB=new T.Vector3(),vertex=new T.Vector3();
   for(let row=0;row<trunk.length;row++)for(let col=0;col<=trunkSides;col++){
     const offset=(r,c)=>3*(r*(trunkSides+1)+(c+trunkSides)%trunkSides);
@@ -168,7 +170,7 @@ export function buildGreatTree(scene,shared={}){
     for(let i=0;i<=25;i++){
       const t=i/25,f=lerp(begin,end,t),at=f*(trunk.length-1),j=Math.floor(at);
       const p=trunk[j].clone().lerp(trunk[j+1],at-j);
-      const radius=lerp(10.6,5,Math.pow(f,.6))*(1+.12*Math.sin(f*17));
+      const radius=lerp(13.5,6.25,Math.pow(f,.6))*(1+.12*Math.sin(f*17));
       const crest=Math.sin(t*Math.PI),a=angle+.37*Math.sin(t*5+angle)-.18*t;
       p.x+=Math.cos(a)*radius*(.56+.40*crest);p.z+=Math.sin(a)*radius*(.56+.40*crest);
       fold.push(p);
@@ -179,16 +181,16 @@ export function buildGreatTree(scene,shared={}){
   for(let i=0;i<9;i++){
     const a=i*2.399+.4,reach=13+rnd()*8,cx=Math.cos(a),cz=Math.sin(a);
     const pts=new T.CatmullRomCurve3([V(cx*reach,-30-rnd()*8,cz*reach),V(cx*9.5,-9,cz*9.5),V(cx*7.2-.5,9,cz*7.2-2),V(cx*4.8-1.2,23+rnd()*6,cz*4.8-6)]).getPoints(14);
-    tube(pts,f=>lerp(3.3,1.3,f)*(.85+.3*rnd()),10,.9,.6);
+    tube(pts,f=>lerp(4.05,1.59,f)*(.85+.3*rnd()),10,.9,.6);
   }
   const fork=V(-4.3,59,-14.5);
   const limbs=[
     // direction, length, radius, start offset below the fork
     // Primary 4.0 s and 132.9 - 136.9 s: no wood crosses the sky beside the gate, so the gate-side boughs stop
     // well short of it.  Primary 47.9 s / auxiliary 5292 s: the boughs at the fork are heavy and dark.
-    [[-.24,.34,-.89],27,3.9,-2],     // stop above the wall before the opening beside the gate
-    [[-.10,.97,.18],58,3.5,7],       // crown
-    [[.72,.56,-.38],54,2.5,6]       // away from the terrace
+    [[-.24,.34,-.89],27,4.65,-2],     // stop above the wall before the opening beside the gate
+    [[-.10,.97,.18],58,4.05,7],       // crown
+    [[.72,.56,-.38],54,2.92,6]       // away from the terrace
 
   ];
   for(const [dir,length,radius,lift] of limbs){
@@ -199,10 +201,17 @@ export function buildGreatTree(scene,shared={}){
   // lateral crown. The opening between them stays visible when circling.
   const windingStem=new T.CatmullRomCurve3([
     V(6,-38,12),V(3,-17,9),V(-2,-2,6),V(-4.5,12,1),
-    V(-7,23,-6),V(-9,34,-12),V(-11,45,-19),V(-14,54,-27),
+    V(-6.5,23,-5.4),V(-7.8,34,-10.5),V(-9.4,45,-16.4),V(-13.6,54,-25.8),
     V(-25,65,-27),V(-31,77,-23),V(-30,89,-31),V(-36,98,-38)
   ]).getPoints(88);
-  tube(windingStem,f=>.09+10.3*(1-f)**.84,48,.79,.03,true);
+  tube(windingStem,f=>.09+12.4*(1-f)**.84+.63*Math.sin(Math.PI*f)**3,48,.79,.03,true);
+  // The wall masks the roots in the 17 s shot. Above it a broad shoulder
+  // sweeps out under the crown to the left of the carved pier.
+  const trunkShoulder=new T.CatmullRomCurve3([
+    V(-1,-6,2),V(-2,8,-2),V(-4,17,-6),V(-5,26,-11),
+    V(-6.8,33,-15.1),V(-9.7,40,-18.3),V(-13.1,49,-21.7),V(-15.1,55,-25.5)
+  ]).getPoints(36);
+  tube(trunkShoulder,f=>.35+6.1*Math.sin(Math.PI*f)**.56,23,.14,.04);
   // Carry the original upright through the crotch. Its old crown leaders
   // started above the taper and left a wedge of sky at the joint.
   const upperStem=new T.CatmullRomCurve3([
@@ -210,12 +219,12 @@ export function buildGreatTree(scene,shared={}){
     V(.9,70,-8.8),V(-1.3,78,-9.1),V(-5.8,89,-15.2),
     V(-9.2,99,-13),V(-15,106,-16.9),V(-17,116,-20)
   ]).getPoints(58);
-  tube(upperStem,f=>.055+5.4*(1-f)**1.13,34,.39,.01);
+  tube(upperStem,f=>.055+6.35*(1-f)**1.13,34,.39,.01);
   const upperFork=new T.CatmullRomCurve3([
     upperStem[19],V(-3.4,68,-13.2),V(-5.5,75,-19),V(-10.7,81,-23.8),
     V(-17.5,88,-27.5),V(-20.2,96,-34),V(-26,101,-39)
   ]).getPoints(32);
-  tube(upperFork,f=>.055+3.05*(1-f)**1.09,21);
+  tube(upperFork,f=>.055+3.54*(1-f)**1.09,21);
   for(const [path,j,dir,len,r] of [[upperStem,30,[.31,.54,.79],33,2.2],
     [upperStem,43,[-.48,.77,.46],28,1.38],[upperFork,16,[.13,.82,-.47],24,1.32],
     [upperFork,23,[-.48,.32,-.70],20,.93]]){
@@ -224,7 +233,7 @@ export function buildGreatTree(scene,shared={}){
   // The old fork spreads horizontally for several trunk widths, losing
   // weight at each division before the last tips turn into the light.
   const crownArch=new T.CatmullRomCurve3([
-    windingStem[49],V(-15,58,-15),V(-14,68,0),V(-18,77,20),
+    windingStem[49],V(-12.8,56,-18),V(-14,68,0),V(-18,77,20),
     V(-26,84,39),V(-32,87,57),V(-39,88,75),V(-45,91,96),
     V(-50,95,112),V(-56,104,127),V(-57,115,137)
   ]).getPoints(72);
@@ -270,7 +279,7 @@ export function buildGreatTree(scene,shared={}){
     split[12],V(-8.2,51,-26),V(-10.4,50,-35),V(-13,47.5,-45),
     V(-15.1,45.2,-55),V(-17.2,46.5,-66),V(-19.4,49.1,-75),V(-20.3,54.3,-80)
   ]).getPoints(35);
-  tube(lowerBough,f=>lerp(3.85,.095,Math.pow(f,.89)),14,.20,0);
+  tube(lowerBough,f=>lerp(4.65,.095,Math.pow(f,.89)),14,.20,0);
   const lowFork=new T.CatmullRomCurve3([
     lowerBough[13],V(-12.7,46,-40),V(-15,42,-47),
     V(-16.7,39.8,-51),V(-18.1,40.7,-55),V(-20.4,42,-58),V(-21.1,44,-61)
@@ -483,6 +492,51 @@ export function buildGreatTree(scene,shared={}){
     }
   }
 
+  // The stationary wood in Ye 5292–5293 and the 47.9 s reverse shot
+  // stays thick on both sides of the opening. The lower crescent that
+  // sweeps across Ye's parapet is Radahn's moving blade.
+  const twinStem=new T.CatmullRomCurve3([
+    V(-2.2,18,-5),V(-3.5,25.8,-9),V(-6.4,32.0,-16.2),
+    V(-9.8,37.2,-26.0),V(-12.7,42.8,-35.8),V(-14.6,49.3,-43.1),
+    V(-15.8,56.6,-48.2),V(-17.3,66.5,-51.7),V(-19.8,77.1,-53.7),
+    V(-24.7,87.4,-54.2),V(-30.4,95.2,-58.4)
+  ]).getPoints(65);
+  // The first rings are buried in the parent. Keep the new leader broad
+  // until it has passed the existing crown, then taper into the shoots.
+  const twinRadius=f=>lerp(10.25,5.6,T.MathUtils.smoothstep(f,.03,.67))
+    *lerp(1,.07,T.MathUtils.smoothstep(f,.60,1));
+  const firstTwinVertex=P.length/3,twinSides=42;
+  tube(twinStem,twinRadius,twinSides,.17,.01);
+  const barkSeed=lcg(529213),ringPoint=(row,col)=>new T.Vector3().fromArray(P,3*(firstTwinVertex+row*(twinSides+1)+col));
+  // Bark ridges fan continuously out of the bole into the outer leader.
+  // Bury both ends and expose each ridge only where it passes its neighbour.
+  for(const [start,end,turn,girth] of [[1,25,8,1.34],[2,29,12,1.6],[0,27,18,1.15],[4,34,34,.93]]){
+    const grain=[];
+    for(let j=start;j<=end;j++){
+      const u=(j-start)/(end-start),col=turn+2.25*Math.sin(2.5*u)-3.8*u;
+      const k=Math.floor(col),p=ringPoint(j,k).lerp(ringPoint(j,k+1),col-k);
+      const normal=p.clone().sub(twinStem[j]).normalize();
+      p.addScaledVector(normal,-girth*(1.25-.80*Math.sin(Math.PI*u)));
+      grain.push(p);
+    }
+    tube(grain,f=>.035+girth*Math.sin(Math.PI*f)**.66,12,.04,0);
+  }
+  // Short, broken sprays fringe the silhouette under the opening. Root
+  // them on the fluted bark surface so they stay attached in reverse view.
+  for(let i=0;i<94;i++){
+    const row=10+Math.floor(barkSeed()*36),col=Math.floor(barkSeed()*twinSides);
+    const at=ringPoint(row,col),normal=at.clone().sub(twinStem[row]).normalize();
+    if(normal.y>.38)continue;
+    const elbow=at.clone().addScaledVector(normal,.48+.86*barkSeed());
+    const end=elbow.clone().addScaledVector(normal,.42+.67*barkSeed());
+    end.y-=.56+2.3*barkSeed();
+    tube([at,elbow,end],f=>lerp(.14,.035,f),4);
+    if(i%3===0)tube([elbow,elbow.clone().lerp(end,.68).add(new T.Vector3(.38,-.17,.27))],f=>lerp(.085,.022,f),3);
+  }
+  for(const [joint,direction,length,radius] of [
+    [25,[-.49,.48,-.68],21,2.6],[37,[.33,.82,-.46],29,3.1],
+    [46,[-.49,.70,.57],25,2.55],[56,[-.25,.63,-.72],20,1.5]
+  ])branch(twinStem[joint],new T.Vector3(...direction).normalize(),length,radius,2);
   // Lean the complete tree about its foot on the lower terrace. The primary
   // 16.5 s view exposes its gold seam left of the foreground pier; from the
   // reverse side the pier masks the opposite part of the fork.
@@ -550,8 +604,9 @@ export function buildGreatTree(scene,shared={}){
       totalEmissiveRadiance+=vec3(3.2,1.44,.18)*core*(.17+.83*broken)
         +vec3(.79,.34,.041)*flake*hotChip
         +vec3(.18,.061,.009)*flake*smoothstep(.26,.74,fracture);
-      float sap=smoothstep(.20,.76,vHeartwood)*(.39+.61*smoothstep(.24,.73,longFiber+.24*(chip-.5)));
-      totalEmissiveRadiance+=vec3(2.85,1.24,.16)*sap*(1.-.49*treePhase);`);
+      float breakInSeam=treeNoise(vec2(vBark.y*.78,2.9))+ .20*(barkPatch-.5);
+      float sap=smoothstep(.20,.76,vHeartwood)*(.18+.82*smoothstep(.29,.69,breakInSeam))*(.31+.69*smoothstep(.24,.73,longFiber+.24*(chip-.5)));
+      totalEmissiveRadiance+=vec3(1.56,.57,.075)*sap*(.28+.72*broken)*(1.-.49*treePhase);`);
     shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
       float sapwood=smoothstep(.20,.75,vHeartwood);
       float largeBough=smoothstep(.8,4.2,vRadius);
@@ -617,7 +672,7 @@ gl_FragColor.rgb = mix`));
       const splinter=vnoise(y*1.67,4.21)-.5;
       const grain=.41*Math.sin(12*t)+.19*Math.sin(37*t)+.14*Math.sin(81*t)+.63*splinter;
       const lateral=lerp(-2.65,1.75,t)+grain+(track===1?-2.8:track===2?2.3:0)*u;
-      const width=(track===0?.81:.29)*(.60+.40*Math.sin(u*Math.PI)**.55)*(.46+.89*vnoise(y*.63,12.1));
+      const width=(track===0?.63:.24)*(.60+.40*Math.sin(u*Math.PI)**.55)*(.46+.89*vnoise(y*.63,12.1));
       const first=amberColor.length/3;
       for(const side of [-1,-.43,0,.43,1]){
         origin.copy(centre).addScaledVector(across,lateral+side*width).addScaledVector(front,42);
@@ -626,9 +681,10 @@ gl_FragColor.rgb = mix`));
         if(!hit)break;
         hit.point.addScaledVector(front,.12);
         amberPosition.push(hit.point.x,hit.point.y,hit.point.z);
-        const energy=(track?.68:1)*(.40+1.10*vnoise(y*.58+side*.41,13.2));
+        const energy=(track?.68:1)*(.10+.90*vnoise(y*.58+side*.41,13.2))
+          *(.20+.80*T.MathUtils.smoothstep(vnoise(y*.17,8.5),.22,.67));
         const heat=(1-Math.abs(side))**.8*energy;
-        amberColor.push(.24+4.9*heat,.076+1.97*heat,.011+.22*heat);
+        amberColor.push(.19+2.85*heat,.065+.99*heat,.013+.12*heat);
       }
       if(amberColor.length/3!==first+5){
         amberColor.length=amberPosition.length=first*3;previous=null;continue;

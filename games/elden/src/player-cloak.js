@@ -50,7 +50,7 @@ export function createPlayerCloak(actor,sourceMaterial){
   let y,rx,rz;
   if(k===0){y=1.515;rx=.115;rz=.105;}
   else{
-   const s=(k-1)/(ROWS-2),hem=lerp(.82,.31,back)+.12*Math.sin(a*3+.4)+.035*Math.sin(7*a);
+   const s=(k-1)/(ROWS-2),hem=lerp(.80,.24,back)+.105*Math.sin(a*3+.4)+.035*Math.sin(7*a);
    y=lerp(1.445,hem,Math.pow(s,.95));rx=lerp(.24,.525,Math.pow(s,.72));rz=lerp(.155,.485,Math.pow(s,.72));
    // Heavy hanging pleats (primary 17-18 s, 29-33 s): the cloth is fuller than the bell it hangs on.
    const pleat=1+(.115*Math.sin(7*panelAngle+1.3)+.078*Math.sin(11*panelAngle+.4)+.025*Math.sin(19*panelAngle-.9))*Math.pow(s,.7);rx*=pleat;rz*=pleat;
@@ -161,7 +161,7 @@ export function createPlayerCloak(actor,sourceMaterial){
  const handContacts=['Left','Right'].map(side=>({
   a:bone(side+'Hand'),b:bone(side+'HandMiddle1'),pa:V(),pb:V(),ra:.082,rb:.071
  }));
- const armContacts=capsules.slice(-4),weaponContacts=new WeakMap();
+ const armContacts=capsules.slice(-4),shinContacts=capsules.filter(c=>c.b?.name.endsWith('Foot')),weaponContacts=new WeakMap();
  const surface=new Float32Array(count*3),carryOffset=new Float32Array(count*3);
  let carryBlend=0;
  function contactShape(weapon){
@@ -298,7 +298,7 @@ export function createPlayerCloak(actor,sourceMaterial){
     const across=rx*Math.cos(bank)-ry*Math.sin(bank);
     const vertical=rx*Math.sin(bank)+ry*Math.cos(bank);
     let x=across*cy+rz*sy,z=-across*sy+rz*cy;
-    const angle=.93*stream*depth*(.66+.34*cosAngle[n]),ca=Math.cos(angle),sa=Math.sin(angle);
+    const angle=.65*stream*depth*(.66+.34*cosAngle[n]),ca=Math.cos(angle),sa=Math.sin(angle);
     const along=x*windX+z*windZ,offset=along*(ca-1)-vertical*sa;
     targetRest[i]=collar.x+x+windX*offset;
     targetRest[i+1]=collar.y+vertical*ca+along*sa;
@@ -423,6 +423,10 @@ export function createPlayerCloak(actor,sourceMaterial){
      }
     }
    // Include the shoulder row and actual held weapons after adding the folds.
+   // The woven folds and the resampled hem can cross a planted boot even
+   // when every simulation particle cleared its shin. Project the finished
+   // panel behind the calf and the flared boot collar on the return step.
+   if(state.motion==='walk')for(const c of shinContacts)clearSurface(c,.128,sy,cy);
    for(const c of armContacts)clearSurface(c,Math.max(c.ra,c.rb)+.034,sy,cy);
    for(const c of handContacts)if(c.a&&c.b){
     c.a.getWorldPosition(c.pa);c.b.getWorldPosition(c.pb);

@@ -87,15 +87,15 @@ function setBone(bone,start,end,normal,from,length){
 const translationScale=new T.Vector3();
 
 export function createRiderArms(carrier,surface,linen){
-  const portraitClarity={value:0};
+  const portraitClarity={value:0},arrivalLight={value:0};
   const spiritMaterial=new T.MeshStandardMaterial({vertexColors:true,transparent:true,depthWrite:false,
     roughness:.69,emissive:0xf1dcb4,emissiveIntensity:.034});
   spiritMaterial.onBeforeCompile=shader=>{
-    shader.uniforms.portraitClarity=portraitClarity;
+    shader.uniforms.portraitClarity=portraitClarity;shader.uniforms.arrivalLight=arrivalLight;
     shader.vertexShader='attribute vec3 skinProfile;varying vec3 spiritSurface;varying float spiritAlong;\n'+shader.vertexShader;
     shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\n spiritSurface=skinProfile;spiritAlong=position.y;');
-    shader.fragmentShader='varying vec3 spiritSurface;varying float spiritAlong;uniform float portraitClarity;\n'+shader.fragmentShader;
+    shader.fragmentShader='varying vec3 spiritSurface;varying float spiritAlong;uniform float portraitClarity;uniform float arrivalLight;\n'+shader.fragmentShader;
     shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
       {
       vec3 eye=normalize(vViewPosition);
@@ -117,9 +117,10 @@ export function createRiderArms(carrier,surface,linen){
       // picks up the pale edge, including the outline of each fingertip.
       float optical=.049+.083*thickness+.044*palm+.018*grain;
       diffuseColor.a=opacity*mix(1.,2.22,portraitClarity)*(1.-exp(-optical/max(.28,angle))+.078*rim);
-      diffuseColor.a=clamp(diffuseColor.a,0.,.92);
+      diffuseColor.a=mix(clamp(diffuseColor.a,0.,.92),.42+.41*rim+.055*grain,arrivalLight);
       outgoingLight*=mix(vec3(.74,.79,.83),vec3(.93,.86,.68),grain*.62);
       outgoingLight*=.76;
+      outgoingLight+=arrivalLight*vec3(.92,.72,.44)*(.65+.35*rim);
       outgoingLight+=vec3(.135,.125,.103)*(palm+.72*grain)
         +vec3(.27,.23,.16)*rim*(.38+through+keyRim)
         +vec3(.09,.078,.054)*through*(1.-thickness);
@@ -138,6 +139,15 @@ export function createRiderArms(carrier,surface,linen){
       if(fract(sin(dot(cell,vec3(21.3,37.1,59.7)))*16341.183)>.23)discard;`);
   };
   const solidMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.79,emissive:0xf0d9c4,emissiveIntensity:.10});
+  solidMaterial.onBeforeCompile=shader=>{
+    shader.uniforms.arrivalLight=arrivalLight;
+    shader.fragmentShader='uniform float arrivalLight;\n'+shader.fragmentShader.replace('#include <opaque_fragment>',`
+      vec3 skinNormal=inverseTransformDirection(normal,viewMatrix);
+      float wrap=clamp(.54+.46*dot(skinNormal,normalize(vec3(-.40,.80,-.45))),0.,1.);
+      float grazing=pow(1.-abs(dot(normal,normalize(vViewPosition))),2.);
+      outgoingLight+=arrivalLight*vec3(.80,.74,.60)*(.35+.49*wrap+.18*grazing);
+      #include <opaque_fragment>`);
+  };
   const arms=[];
   for(const [side,spirit] of [[1,false],[-1,true],[1,true]]){
     const mesh=new T.SkinnedMesh(armGeometry(side,spirit),spirit?spiritMaterial:solidMaterial);
@@ -161,9 +171,14 @@ export function createRiderArms(carrier,surface,linen){
   const shoulderAxis=V(1,0,0),collar=V(0,0,0),wristContact=V(0,0,0);
   const shoulderPos=[V(-.78,3.48,-.27),V(.78,3.48,-.27)];
   const boneWorld=new T.Matrix4(),boneEnds=[V(0,0,0),V(0,0,0)];let shoulderBones=null;
+  const brow=carrier.getObjectByName('miquella-portrait-focus').position;
+  const arrivingRoot=new T.Vector3(),armRoot=new T.Vector3();
   function update(boss,time=null){
     const cinematic=Number.isFinite(time),embrace=cinematic?smooth(time,60.4,70.8):1;
     portraitClarity.value=cinematic?smooth(time,64.,71.)*(1.-smooth(time,73.,77.)):0;
+    const arrival=cinematic&&time>=59.15?1-smooth(time,60.4,64.45):0;
+    solidMaterial.emissiveIntensity=.10+.42*arrival;
+    arrivalLight.value=arrival;
     const lift=cinematic?smooth(time,73.35,77.8):0;
     if(boss?.bones){
       shoulderBones??=Object.values(boss.bones).filter(b=>/(Left|Right)Arm$/.test(b.name));
@@ -223,9 +238,27 @@ export function createRiderArms(carrier,surface,linen){
         wr.lerp(high.set(root.x+.57,root.y+1.13,root.z-.53),lift);
         tip.lerp(high.set(root.x+.39,root.y+1.32,root.z-.57),lift);
       }
-      setBone(bones[0],root,el,normal,0,elbow);
+      armRoot.copy(root);
+      if(arrival>0){
+        // At the gate the three palms reach in front of the bright hair.
+        // The local -Z direction brings their fingers toward the lens.
+        const higher=spirit&&s>0;
+        arrivingRoot.copy(brow);arrivingRoot.x+=s*.24;arrivingRoot.y-=.29;arrivingRoot.z+=.08;
+        armRoot.lerp(arrivingRoot,arrival);
+        const settling=smooth(time,59.15,62.4);
+        // One spectral elbow rises behind the crown, with its wrist curled
+        // back inward. The nearer arm opens low and bends toward the lens.
+        reach.copy(arrivingRoot).addScaledVector(shoulderAxis,s*(higher?.45:spirit?.34:.39));
+        reach.y+=higher?.29:spirit?-.24:-.32;reach.z+=higher?.23:-.09;el.lerp(reach,arrival);
+        reach.copy(arrivingRoot).addScaledVector(shoulderAxis,s*(higher?.25:spirit?.54:.65));
+        reach.y+=higher?.48-.10*settling:spirit?-.13:-.11+.10*settling;
+        reach.z-=higher?.02:spirit?.32:.42;wr.lerp(reach,arrival);
+        reach.addScaledVector(shoulderAxis,s*(higher?-.14:.075));
+        reach.y+=higher?-.14:.068;reach.z-=higher?.12:.19;tip.lerp(reach,arrival);
+      }
+      setBone(bones[0],armRoot,el,normal,0,elbow);
       setBone(bones[1],el,wr,normal,elbow,wrist-elbow);
-      mesh.morphTargetInfluences[0]=embrace*(spirit?1:1.-.71*lift);
+      mesh.morphTargetInfluences[0]=Math.max(arrival*(spirit?.38:.23),embrace*(spirit?1:1.-.71*lift));
       setBone(bones[2],wr,tip,spirit?(s>0?downFront:underPalm):inwardPalm,wrist,.33);
     }
   }
