@@ -538,6 +538,7 @@
   startReel($("#celeste-card"), [celesteClip("ckpt0-wavedash")]);
   startReel($("#sf6"), [sf6Clip("04"), sf6Clip("01")]);
   startReel($("#odyssey"), [{ src: "media/odyssey/demo.mp4" }]);
+  startReel($("#nier"), [{ src: "media/nier/demo.mp4" }]);
 
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
   const passes = (verdicts) => verdicts.filter((verdict) => verdict.v === "pass").length;
