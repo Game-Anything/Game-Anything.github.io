@@ -63,9 +63,9 @@ window.SITE_ZH = {
   "alt-sekiro-a": "原版只狼：狼从荒废寺庙出发",
   "alt-sekiro-b": "复刻版，同一段路线",
   "cell-sekiro": "从荒废寺庙一路跑进阿什纳城外。",
-  "alt-pvz-a": "原版：泳池关卡，屏幕上是一大波僵尸的提示",
-  "alt-pvz-b": "复刻版：泳池关卡，屏幕上是一大波僵尸的提示",
-  "cell-pvz": "阳光、植物和尸潮，纯 Canvas 实现。<a href=\"https://www.youtube.com/watch?v=3WhItByKVFo&amp;t=550s\" target=\"_blank\" rel=\"noopener\">原版视频</a>",
+  "alt-pvz-a": "原版植物大战僵尸：泳池 3-7 关，第一批僵尸走到防线前",
+  "alt-pvz-b": "Agent 在复刻版上玩同一关",
+  "cell-pvz": "泳池 3-7 关：上面是原版通关，下面是 Agent 在复刻版上玩。<a href=\"https://www.youtube.com/watch?v=3WhItByKVFo\" target=\"_blank\" rel=\"noopener\">原版视频</a>",
 
   "repo-pitch": "工业级流水线，合成可变化、可验证的游戏环境。",
   "repo-in": "输入仓库",

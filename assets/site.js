@@ -540,6 +540,7 @@
   startReel($("#odyssey"), [{ src: "media/odyssey/demo.mp4" }]);
   startReel($("#nier"), [{ src: "media/nier/demo.mp4" }]);
   startReel($("#sekiro"), [{ src: "media/sekiro/demo.mp4" }]);
+  startReel($("#pvz"), [{ src: "media/pvz/demo.mp4" }]);
 
   const outcomes = (clip) => clip.verdicts.filter((verdict) => verdict.focus === "Outcome");
   const passes = (verdicts) => verdicts.filter((verdict) => verdict.v === "pass").length;
